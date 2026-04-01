@@ -108,6 +108,24 @@ export async function fetchProjects(): Promise<Array<{ key: string; name: string
   }));
 }
 
+export async function fetchProjectEpics(projectKey: string): Promise<JiraEpic[]> {
+  const fields = ["summary", "status", "priority", "duedate", "assignee", "created", "updated"];
+  const issues = await searchJira(
+    `project = "${projectKey}" AND issuetype = Epic AND created >= "2026-01-01" ORDER BY duedate ASC`,
+    fields, 100
+  );
+  return issues.map((issue: any) => ({
+    key: issue.key,
+    summary: issue.fields.summary || "",
+    status: issue.fields.status?.name || "Unknown",
+    priority: issue.fields.priority?.name || "Medium",
+    duedate: issue.fields.duedate || null,
+    assignee: issue.fields.assignee?.displayName || null,
+    created: issue.fields.created || "",
+    updated: issue.fields.updated || "",
+  }));
+}
+
 export async function fetchDashboardData(projectKey?: string): Promise<JiraDashboardData> {
   const key = projectKey || PROJECT_KEY;
   const epicFields = ["summary", "status", "priority", "duedate", "assignee", "description", "created", "updated"];
