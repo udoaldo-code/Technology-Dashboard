@@ -13,12 +13,12 @@ type Page = "jira" | "gantt" | "kpi";
 
 // ─── Status / Priority ──────────────────────────────────────────────────────
 const STATUS_CFG: Record<string, { color: string; bg: string; border: string; dot: string }> = {
-  "Done":          { color: "#10b981", bg: "#10b98120", border: "#10b98150", dot: "#10b981" },
-  "In Progress":   { color: "#818cf8", bg: "#6366f120", border: "#6366f150", dot: "#818cf8" },
-  "To Do":         { color: "#94a3b8", bg: "#94a3b815", border: "#94a3b840", dot: "#94a3b8" },
-  "Delay":         { color: "#f87171", bg: "#ef444420", border: "#ef444450", dot: "#f87171" },
-  "On Hold":       { color: "#fb923c", bg: "#f9731620", border: "#f9731650", dot: "#fb923c" },
-  "Waiting telco": { color: "#fbbf24", bg: "#f59e0b20", border: "#f59e0b50", dot: "#fbbf24" },
+  "Done":          { color: "#059669", bg: "#d1fae5", border: "#6ee7b7", dot: "#059669" },
+  "In Progress":   { color: "#4f46e5", bg: "#ede9fe", border: "#a5b4fc", dot: "#4f46e5" },
+  "To Do":         { color: "#475569", bg: "#f1f5f9", border: "#cbd5e1", dot: "#94a3b8" },
+  "Delay":         { color: "#dc2626", bg: "#fee2e2", border: "#fca5a5", dot: "#dc2626" },
+  "On Hold":       { color: "#ea580c", bg: "#ffedd5", border: "#fdba74", dot: "#ea580c" },
+  "Waiting telco": { color: "#b45309", bg: "#fef3c7", border: "#fcd34d", dot: "#d97706" },
 };
 const PRIORITY_CFG: Record<string, { icon: string }> = {
   "Highest": { icon: "🔴" }, "High": { icon: "🟠" },
@@ -91,28 +91,26 @@ function generateRecs(epics: JiraEpic[], tasks: JiraTask[]) {
 function Linkit360Logo() {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 0, flexShrink: 0 }}>
-      {/* Icon box — dark navy with indigo ring */}
+      {/* Icon box */}
       <div style={{
         width: 36, height: 36, borderRadius: 9,
-        background: "#0f0e1a",
-        border: "2px solid #6366f1",
+        background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
         display: "flex", alignItems: "center", justifyContent: "center",
         flexShrink: 0,
-        boxShadow: "0 0 10px #6366f140",
+        boxShadow: "0 2px 8px #4f46e530",
       }}>
-        {/* Chain-link SVG icon */}
         <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-          <path d="M5 11h3.5M13.5 11H17" stroke="#a5b4fc" strokeWidth="2" strokeLinecap="round" />
-          <rect x="7.5" y="7.5" width="7" height="7" rx="3.5" stroke="#818cf8" strokeWidth="1.8" fill="none" />
-          <circle cx="11" cy="11" r="2" fill="#6366f1" />
+          <path d="M5 11h3.5M13.5 11H17" stroke="white" strokeWidth="2" strokeLinecap="round" />
+          <rect x="7.5" y="7.5" width="7" height="7" rx="3.5" stroke="white" strokeWidth="1.8" fill="none" />
+          <circle cx="11" cy="11" r="2" fill="white" />
         </svg>
       </div>
       {/* Text */}
       <div style={{ marginLeft: 9, lineHeight: 1.1 }}>
         <div style={{ fontSize: 15, fontWeight: 900, letterSpacing: "-0.5px", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-          <span style={{ color: "#1e3a8a" }}>LINKIT</span><span style={{ color: "#6366f1" }}>360</span>
+          <span style={{ color: "#1e3a8a" }}>LINKIT</span><span style={{ color: "#4f46e5" }}>360</span>
         </div>
-        <div style={{ fontSize: 9.5, fontWeight: 600, color: "#6366f1", letterSpacing: "0.12em", textTransform: "uppercase" }}>
+        <div style={{ fontSize: 9.5, fontWeight: 600, color: "#4f46e5", letterSpacing: "0.12em", textTransform: "uppercase" }}>
           Technology
         </div>
       </div>
@@ -264,7 +262,7 @@ export default function Dashboard() {
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
       {/* ── Navbar ── */}
-      <header style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 1px 8px rgba(0,0,0,0.3)" }}>
+      <header style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 1px 8px rgba(0,0,0,0.08)" }}>
         <div style={{ maxWidth: 1300, margin: "0 auto", padding: "0 16px" }}>
           {/* Top row */}
           <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", flexWrap: "wrap" }}>
@@ -352,7 +350,7 @@ export default function Dashboard() {
           <>
             {/* Error banner */}
             {error && !data && (
-              <div style={{ background: "#ef444415", border: "1px solid #ef444440", borderRadius: "var(--radius)", padding: "14px 16px", marginBottom: 16, display: "flex", gap: 10, alignItems: "center" }}>
+              <div style={{ background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: "var(--radius)", padding: "14px 16px", marginBottom: 16, display: "flex", gap: 10, alignItems: "center" }}>
                 <span style={{ fontSize: 20 }}>⚠️</span>
                 <div>
                   <div style={{ fontWeight: 700, color: "#ef4444" }}>Failed to load Jira data</div>
@@ -414,7 +412,7 @@ export default function Dashboard() {
                   {!risks.length ? (
                     <div style={{ fontSize: 13, color: "var(--text-muted)", textAlign: "center", padding: 12 }}>No critical risks 🎉</div>
                   ) : risks.map((r, i) => (
-                    <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: r.level === "critical" ? "#ef444415" : r.level === "high" ? "#f9731615" : "#f59e0b15", border: `1px solid ${r.level === "critical" ? "#ef444440" : r.level === "high" ? "#f9731640" : "#f59e0b40"}`, borderRadius: "var(--radius-sm)", padding: "10px 12px" }}>
+                    <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: r.level === "critical" ? "#fee2e2" : r.level === "high" ? "#ffedd5" : "#fef9c3", border: `1px solid ${r.level === "critical" ? "#fca5a5" : r.level === "high" ? "#fdba74" : "#fde047"}`, borderRadius: "var(--radius-sm)", padding: "10px 12px" }}>
                       <span style={{ fontSize: 16, flexShrink: 0 }}>{r.level === "critical" ? "🔴" : r.level === "high" ? "🟠" : "🟡"}</span>
                       <span style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.5 }}>{r.text}</span>
                     </div>
@@ -429,7 +427,7 @@ export default function Dashboard() {
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {recs.map((r, i) => (
-                    <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "#6366f115", border: "1px solid #6366f140", borderRadius: "var(--radius-sm)", padding: "10px 12px" }}>
+                    <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "#ede9fe", border: "1px solid #c4b5fd", borderRadius: "var(--radius-sm)", padding: "10px 12px" }}>
                       <span style={{ background: "var(--accent)", color: "#fff", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{i + 1}</span>
                       <span style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.5 }}>{r}</span>
                     </div>
@@ -599,7 +597,7 @@ function WinsView({ epics }: { epics: JiraEpic[] }) {
   const months = Object.keys(byMonth).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
   return (
     <div>
-      <Card style={{ padding: "14px 16px", marginBottom: 16, background: "linear-gradient(135deg,#10b98115,#10b98108)", border: "1px solid #10b98140" }}>
+      <Card style={{ padding: "14px 16px", marginBottom: 16, background: "linear-gradient(135deg,#d1fae5,#ecfdf5)", border: "1px solid #6ee7b7" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontSize: 32 }}>🏆</span>
           <div><div style={{ fontSize: 18, fontWeight: 800, color: "var(--green)" }}>{epics.length} Epics Completed</div><div style={{ fontSize: 13, color: "var(--text-muted)" }}>Across {Object.keys(byMonth).length} months · Great delivery!</div></div>
@@ -613,7 +611,7 @@ function WinsView({ epics }: { epics: JiraEpic[] }) {
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {byMonth[month].map((e) => (
-              <Card key={e.key} style={{ padding: "12px 14px", borderLeft: "4px solid var(--green)", background: "#10b98108" }}>
+              <Card key={e.key} style={{ padding: "12px 14px", borderLeft: "4px solid var(--green)", background: "#f0fdf4" }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
                   <span style={{ fontSize: 16, flexShrink: 0 }}>✅</span>
                   <div style={{ flex: 1, minWidth: 0 }}>

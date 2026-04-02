@@ -1,42 +1,47 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #0f1117;
-  --surface: #1a1d27;
-  --surface2: #222535;
-  --border: #2e3148;
-  --border2: #3e4468;
-  --text: #e2e8f0;
-  --text-muted: #94a3b8;
-  --text-light: #64748b;
-  --accent: #6366f1;
-  --accent-light: #6366f125;
-  --green: #10b981;
-  --green-light: #10b98120;
-  --red: #ef4444;
-  --red-light: #ef444420;
-  --orange: #f97316;
-  --orange-light: #f9731620;
-  --yellow: #f59e0b;
-  --yellow-light: #f59e0b20;
-  --blue: #3b82f6;
-  --blue-light: #3b82f620;
-  --purple: #8b5cf6;
-  --purple-light: #8b5cf620;
-  --gray: #94a3b8;
-  --gray-light: #94a3b820;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
-  --shadow: 0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -1px rgba(0,0,0,0.3);
-  --shadow-md: 0 10px 15px -3px rgba(0,0,0,0.5), 0 4px 6px -2px rgba(0,0,0,0.3);
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --surface2: #f8fafc;
+  --border: #e2e8f0;
+  --border2: #cbd5e1;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --text-light: #94a3b8;
+  --accent: #4f46e5;
+  --accent-light: #4f46e518;
+  --green: #059669;
+  --green-light: #05966918;
+  --red: #dc2626;
+  --red-light: #dc262618;
+  --orange: #ea580c;
+  --orange-light: #ea580c18;
+  --yellow: #d97706;
+  --yellow-light: #d9770618;
+  --blue: #2563eb;
+  --blue-light: #2563eb18;
+  --purple: #7c3aed;
+  --purple-light: #7c3aed18;
+  --gray: #64748b;
+  --gray-light: #64748b15;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
+  --shadow: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -1px rgba(0,0,0,0.04);
+  --shadow-md: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0,0,0,0.04);
   --radius: 12px;
   --radius-sm: 8px;
 }
 
 * { box-sizing: border-box; }
 
-body {
+html {
+  color-scheme: light;
   background: var(--bg);
-  color: var(--text);
+}
+
+body {
+  background: var(--bg) !important;
+  color: var(--text) !important;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
   margin: 0;
   padding: 0;

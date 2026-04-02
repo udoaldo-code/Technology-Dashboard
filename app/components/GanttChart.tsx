@@ -230,7 +230,7 @@ export default function GanttChart({ defaultProject, allProjects }: GanttChartPr
 
       {/* Error */}
       {error && (
-        <div style={{ background: "#ef444415", border: "1px solid #ef444440", borderRadius: "var(--radius)", padding: 14, color: "#ef4444", fontSize: 13 }}>
+        <div style={{ background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: "var(--radius)", padding: 14, color: "#dc2626", fontSize: 13 }}>
           ⚠️ {error}
         </div>
       )}

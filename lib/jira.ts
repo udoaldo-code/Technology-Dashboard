@@ -97,7 +97,7 @@ function extractText(field: any): string {
 }
 
 export async function fetchProjects(): Promise<Array<{ key: string; name: string; category: string | null }>> {
-  const url = `${JIRA_BASE_URL}/rest/api/3/project/search?maxResults=50&action=browse`;
+  const url = `${JIRA_BASE_URL}/rest/api/3/project/search?maxResults=100&action=browse`;
   const res = await fetch(url, { headers: getAuthHeaders(), next: { revalidate: 3600 } });
   if (!res.ok) throw new Error(`Projects fetch error ${res.status}`);
   const data = await res.json();

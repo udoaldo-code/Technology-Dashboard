@@ -25,9 +25,9 @@ function getCategory(name: string): string {
 
 function statusStyle(s: string) {
   const sl = s.toLowerCase();
-  if (sl.includes("achieved") && !sl.includes("not")) return { text: "#10b981", bg: "#10b98115", border: "#10b98140" };
-  if (sl.includes("on track"))    return { text: "#f59e0b", bg: "#f59e0b15", border: "#f59e0b40" };
-  if (sl.includes("not achieved"))return { text: "#ef4444", bg: "#ef444415", border: "#ef444440" };
+  if (sl.includes("achieved") && !sl.includes("not")) return { text: "#059669", bg: "#d1fae5", border: "#6ee7b7" };
+  if (sl.includes("on track"))    return { text: "#b45309", bg: "#fef3c7", border: "#fcd34d" };
+  if (sl.includes("not achieved"))return { text: "#dc2626", bg: "#fee2e2", border: "#fca5a5" };
   return { text: "#64748b", bg: "#64748b10", border: "#64748b30" };
 }
 function statusIcon(s: string) {
@@ -118,7 +118,7 @@ function WeeklyHighlightsView({ highlights }: { highlights: WeeklyHighlight[] })
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {current.wins.map((win, i) => (
-                  <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "#10b98110", border: "1px solid #10b98130", borderRadius: "var(--radius-sm)", padding: "8px 12px" }}>
+                  <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "#f0fdf4", border: "1px solid #86efac", borderRadius: "var(--radius-sm)", padding: "8px 12px" }}>
                     <span style={{ color: "#10b981", fontWeight: 800, flexShrink: 0, marginTop: 1 }}>✓</span>
                     <span style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.5 }}>{win}</span>
                   </div>
@@ -137,7 +137,7 @@ function WeeklyHighlightsView({ highlights }: { highlights: WeeklyHighlight[] })
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {current.issues.map((issue, i) => (
-                  <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "#ef444415", border: "1px solid #ef444430", borderRadius: "var(--radius-sm)", padding: "8px 12px" }}>
+                  <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: "var(--radius-sm)", padding: "8px 12px" }}>
                     <span style={{ color: "#ef4444", fontWeight: 800, flexShrink: 0, marginTop: 1 }}>!</span>
                     <span style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.5 }}>{issue}</span>
                   </div>
@@ -152,11 +152,11 @@ function WeeklyHighlightsView({ highlights }: { highlights: WeeklyHighlight[] })
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                 <span style={{ fontSize: 16 }}>🎯</span>
                 <span style={{ fontWeight: 700, fontSize: 13, color: "#6366f1" }}>Top Priorities</span>
-                <span style={{ background: "#6366f120", color: "#818cf8", borderRadius: 20, padding: "1px 8px", fontSize: 11, fontWeight: 600 }}>{current.priorities.length}</span>
+                <span style={{ background: "#ede9fe", color: "#4f46e5", borderRadius: 20, padding: "1px 8px", fontSize: 11, fontWeight: 600 }}>{current.priorities.length}</span>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {current.priorities.map((pri, i) => (
-                  <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "#6366f115", border: "1px solid #6366f130", borderRadius: "var(--radius-sm)", padding: "8px 12px" }}>
+                  <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "#f5f3ff", border: "1px solid #c4b5fd", borderRadius: "var(--radius-sm)", padding: "8px 12px" }}>
                     <span style={{ background: "#6366f1", color: "#fff", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, flexShrink: 0 }}>{i + 1}</span>
                     <span style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.5 }}>{pri}</span>
                   </div>
