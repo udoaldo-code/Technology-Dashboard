@@ -4,12 +4,13 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import type { JiraDashboardData, JiraEpic, JiraTask } from "@/lib/jira";
 
-const GanttChart = dynamic(() => import("@/app/components/GanttChart"), { ssr: false });
-const KPIReport  = dynamic(() => import("@/app/components/KPIReport"),  { ssr: false });
+const GanttChart      = dynamic(() => import("@/app/components/GanttChart"),      { ssr: false });
+const KPIReport       = dynamic(() => import("@/app/components/KPIReport"),       { ssr: false });
+const VelocityReport  = dynamic(() => import("@/app/components/VelocityReport"),  { ssr: false });
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface Project { key: string; name: string; category: string | null; }
-type Page = "jira" | "gantt" | "kpi";
+type Page = "jira" | "gantt" | "kpi" | "velocity";
 
 // ─── Status / Priority ──────────────────────────────────────────────────────
 const STATUS_CFG: Record<string, { color: string; bg: string; border: string; dot: string }> = {
@@ -205,7 +206,7 @@ export default function Dashboard() {
   const [loading, setLoading]         = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [countdown, setCountdown]     = useState(3600);
-  const [activeTab, setActiveTab]     = useState<"epics" | "tasks" | "wins">("epics");
+  const [activeTab, setActiveTab]     = useState<"epics" | "tasks" | "wins" | "sprint" | "todo">("epics");
   const [epicSearch, setEpicSearch]   = useState("");
   const [statusFilter, setStatus]     = useState("All");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -254,9 +255,10 @@ export default function Dashboard() {
   const currentProject = projects.find((p) => p.key === activeProject);
 
   const NAV_ITEMS: { id: Page; label: string; icon: string; desc: string }[] = [
-    { id: "jira",  label: "Jira Dashboard",  icon: "📋", desc: "Epics, tasks & status" },
-    { id: "gantt", label: "Gantt Timeline",  icon: "📅", desc: "Delivery timeline" },
-    { id: "kpi",   label: "KPI Report",      icon: "📊", desc: "Dept. performance" },
+    { id: "jira",     label: "Jira Dashboard",   icon: "📋", desc: "Epics, tasks & status" },
+    { id: "gantt",    label: "Gantt Timeline",   icon: "📅", desc: "Delivery timeline" },
+    { id: "kpi",      label: "KPI Report",       icon: "📊", desc: "Dept. performance" },
+    { id: "velocity", label: "Velocity Report",  icon: "🚀", desc: "Team velocity & allocation" },
   ];
 
   return (
@@ -344,6 +346,9 @@ export default function Dashboard() {
         {page === "gantt" && (
           <GanttChart defaultProject={activeProject} allProjects={projects} />
         )}
+
+        {/* ══ VELOCITY REPORT ══ */}
+        {page === "velocity" && <VelocityReport projectKey={activeProject} allProjects={projects} />}
 
         {/* ══ JIRA DASHBOARD ══ */}
         {page === "jira" && (
@@ -438,10 +443,10 @@ export default function Dashboard() {
 
             {/* Tabs */}
             <div style={{ display: "flex", gap: 4, marginBottom: 12, overflowX: "auto", padding: "2px 0" }}>
-              {([["epics","Active Epics",filteredEpics.length],["tasks","Tasks",tasks.length],["wins","Wins 🏆",doneEpics.length]] as const).map(([tab,label,count]) => (
+              {([["epics","Active Epics",filteredEpics.length],["tasks","Tasks",tasks.length],["wins","Wins 🏆",doneEpics.length],["sprint","Sprint Week ⚡",null],["todo","To Do 📌",null]] as const).map(([tab,label,count]) => (
                 <button key={tab} onClick={() => setActiveTab(tab)} style={{ display: "flex", alignItems: "center", gap: 6, background: activeTab === tab ? "var(--accent)" : "var(--surface)", color: activeTab === tab ? "#fff" : "var(--text-muted)", border: activeTab === tab ? "none" : "1px solid var(--border)", borderRadius: 20, padding: "7px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
                   {label}
-                  <span style={{ background: activeTab === tab ? "rgba(255,255,255,0.25)" : "var(--surface2)", color: activeTab === tab ? "#fff" : "var(--text-muted)", borderRadius: 20, padding: "1px 7px", fontSize: 11 }}>{count}</span>
+                  {count !== null && <span style={{ background: activeTab === tab ? "rgba(255,255,255,0.25)" : "var(--surface2)", color: activeTab === tab ? "#fff" : "var(--text-muted)", borderRadius: 20, padding: "1px 7px", fontSize: 11 }}>{count}</span>}
                 </button>
               ))}
             </div>
@@ -462,9 +467,11 @@ export default function Dashboard() {
 
             {/* Tab content */}
             <div className="fade-in" key={activeTab + activeProject}>
-              {activeTab === "epics" && <EpicsView epics={filteredEpics} tasks={tasks} />}
-              {activeTab === "tasks" && <TasksView tasks={tasks} />}
-              {activeTab === "wins"  && <WinsView  epics={doneEpics} />}
+              {activeTab === "epics"  && <EpicsView epics={filteredEpics} tasks={tasks} />}
+              {activeTab === "tasks"  && <TasksView tasks={tasks} />}
+              {activeTab === "wins"   && <WinsView  epics={doneEpics} />}
+              {activeTab === "sprint" && <SprintView projectKey={activeProject} />}
+              {activeTab === "todo"   && <ToDoView tasks={tasks} />}
             </div>
           </>
         )}
@@ -585,6 +592,431 @@ function TasksView({ tasks }: { tasks: JiraTask[] }) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ─── Sprint View ──────────────────────────────────────────────────────────────
+interface SprintIssue {
+  key: string; summary: string; status: string; issuetype: string;
+  assignee: string | null; priority: string; duedate: string | null; points: number | null;
+}
+interface SprintData {
+  sprintId: number; sprintName: string; state: string;
+  startDate: string; endDate: string; goal: string;
+  issues: SprintIssue[]; fetchedAt: string; error?: string;
+}
+
+const SPRINT_STATUS_ORDER = ["In Progress", "To Do", "Testing QA", "Done", "Waiting telco", "Delay", "On Hold"];
+
+function SprintView({ projectKey }: { projectKey: string }) {
+  const [data, setData]       = useState<SprintData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState<string | null>(null);
+  const [groupBy, setGroupBy] = useState<"status" | "assignee" | "type">("status");
+  const [search, setSearch]   = useState("");
+
+  useEffect(() => {
+    setLoading(true); setError(null); setData(null);
+    fetch(`/api/sprint?project=${projectKey}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => { if (d.error && !d.sprintName) { setError(d.error); } else { setData(d); } setLoading(false); })
+      .catch((e) => { setError(e.message); setLoading(false); });
+  }, [projectKey]);
+
+  if (loading) return (
+    <Card style={{ padding: 48, textAlign: "center" }}>
+      <div style={{ width: 36, height: 36, border: "3px solid var(--border)", borderTopColor: "var(--accent)", borderRadius: "50%", margin: "0 auto 12px", animation: "spin 0.7s linear infinite" }} />
+      <div style={{ color: "var(--text-muted)", fontSize: 14 }}>Loading sprint data…</div>
+    </Card>
+  );
+
+  if (error) return (
+    <Card style={{ padding: 32, textAlign: "center" }}>
+      <div style={{ fontSize: 32, marginBottom: 8 }}>⚠️</div>
+      <div style={{ color: "var(--red)", fontWeight: 700, marginBottom: 6 }}>Could not load sprint</div>
+      <div style={{ color: "var(--text-muted)", fontSize: 13 }}>{error}</div>
+    </Card>
+  );
+
+  if (!data || !data.sprintName) return (
+    <Card style={{ padding: 32, textAlign: "center" }}>
+      <div style={{ fontSize: 32, marginBottom: 8 }}>🏁</div>
+      <div style={{ color: "var(--text-muted)", fontSize: 14 }}>No active sprint found for this project.</div>
+    </Card>
+  );
+
+  const issues = data.issues || [];
+  const filtered = issues.filter((i) =>
+    !search || i.summary.toLowerCase().includes(search.toLowerCase()) || i.key.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Stats
+  const total     = issues.length;
+  const done      = issues.filter((i) => i.status === "Done").length;
+  const inProg    = issues.filter((i) => i.status === "In Progress").length;
+  const blocked   = issues.filter((i) => i.status === "Waiting telco" || i.status === "On Hold").length;
+  const delayed   = issues.filter((i) => i.status === "Delay").length;
+  const bugs      = issues.filter((i) => i.issuetype === "Bug").length;
+  const velocity  = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  // Sprint dates
+  const start   = new Date(data.startDate);
+  const end     = new Date(data.endDate);
+  const now     = new Date();
+  const totalMs = end.getTime() - start.getTime();
+  const elapsedMs = Math.min(now.getTime() - start.getTime(), totalMs);
+  const timeProgress = totalMs > 0 ? Math.round((elapsedMs / totalMs) * 100) : 0;
+  const daysLeft = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / 86400000));
+  const isOvertime = now > end;
+
+  function fmtSprint(d: Date) {
+    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  }
+
+  // Grouping
+  function groupIssues(): Record<string, SprintIssue[]> {
+    const groups: Record<string, SprintIssue[]> = {};
+    for (const issue of filtered) {
+      let key = "";
+      if (groupBy === "status")   key = issue.status;
+      if (groupBy === "assignee") key = issue.assignee || "Unassigned";
+      if (groupBy === "type")     key = issue.issuetype;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(issue);
+    }
+    return groups;
+  }
+
+  const groups = groupIssues();
+  const groupKeys = Object.keys(groups).sort((a, b) => {
+    if (groupBy === "status") {
+      return (SPRINT_STATUS_ORDER.indexOf(a) ?? 99) - (SPRINT_STATUS_ORDER.indexOf(b) ?? 99);
+    }
+    return a.localeCompare(b);
+  });
+
+  // Per-assignee stats for velocity table
+  const assigneeStats: Record<string, { total: number; done: number; inprog: number; blocked: number }> = {};
+  for (const issue of issues) {
+    const name = issue.assignee || "Unassigned";
+    if (!assigneeStats[name]) assigneeStats[name] = { total: 0, done: 0, inprog: 0, blocked: 0 };
+    assigneeStats[name].total++;
+    if (issue.status === "Done") assigneeStats[name].done++;
+    else if (issue.status === "In Progress" || issue.status === "Testing QA") assigneeStats[name].inprog++;
+    else if (issue.status === "Waiting telco" || issue.status === "On Hold" || issue.status === "Delay") assigneeStats[name].blocked++;
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+      {/* Sprint Header Card */}
+      <Card style={{ padding: "16px 18px", borderLeft: "4px solid var(--accent)" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--accent)" }}>
+                ⚡ Active Sprint
+              </span>
+              {isOvertime && (
+                <span style={{ background: "#fee2e2", color: "#dc2626", borderRadius: 20, padding: "1px 8px", fontSize: 11, fontWeight: 700 }}>
+                  Overtime
+                </span>
+              )}
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text)", marginBottom: 4 }}>{data.sprintName}</div>
+            {data.goal && <div style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.5 }}>🎯 {data.goal}</div>}
+            <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 6 }}>
+              📅 {fmtSprint(start)} → {fmtSprint(end)}
+              <span style={{ marginLeft: 12, fontWeight: 600, color: isOvertime ? "#dc2626" : daysLeft <= 1 ? "#d97706" : "var(--text-muted)" }}>
+                {isOvertime ? "Sprint ended" : daysLeft === 0 ? "Ends today" : `${daysLeft}d remaining`}
+              </span>
+            </div>
+          </div>
+          {/* Completion ring */}
+          <div style={{ textAlign: "center", flexShrink: 0 }}>
+            <div style={{ fontSize: 32, fontWeight: 900, color: velocity >= 80 ? "var(--green)" : velocity >= 50 ? "var(--accent)" : "var(--red)", lineHeight: 1 }}>
+              {velocity}%
+            </div>
+            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>completion</div>
+          </div>
+        </div>
+
+        {/* Dual progress bars */}
+        <div style={{ marginTop: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>
+            <span>Task completion</span><span>{done}/{total}</span>
+          </div>
+          <div style={{ height: 8, background: "#f1f5f9", borderRadius: 4, overflow: "hidden", border: "1px solid var(--border)", marginBottom: 8 }}>
+            <div style={{ height: "100%", width: `${velocity}%`, background: "linear-gradient(90deg,#4f46e5,#10b981)", borderRadius: 4, transition: "width 0.5s" }} />
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>
+            <span>Time elapsed</span>
+            <span style={{ color: timeProgress > velocity + 20 ? "#dc2626" : "var(--text-muted)" }}>
+              {timeProgress}%{timeProgress > velocity + 20 ? " ⚠️ behind schedule" : ""}
+            </span>
+          </div>
+          <div style={{ height: 8, background: "#f1f5f9", borderRadius: 4, overflow: "hidden", border: "1px solid var(--border)" }}>
+            <div style={{ height: "100%", width: `${timeProgress}%`, background: timeProgress > velocity + 20 ? "#fca5a5" : "#cbd5e1", borderRadius: 4, transition: "width 0.5s" }} />
+          </div>
+        </div>
+      </Card>
+
+      {/* Stat chips */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+        {[
+          { label: "Total Issues", value: total,   color: "var(--text)",   icon: "📋" },
+          { label: "Done",         value: done,    color: "var(--green)",  icon: "✅" },
+          { label: "In Progress",  value: inProg,  color: "var(--accent)", icon: "⚙️" },
+          { label: "Delayed",      value: delayed, color: "var(--red)",    icon: "⏰" },
+          { label: "Blocked",      value: blocked, color: "var(--orange)", icon: "🚧" },
+          { label: "Bugs",         value: bugs,    color: bugs > 0 ? "var(--red)" : "var(--green)", icon: "🐛" },
+        ].map((s) => (
+          <Card key={s.label} style={{ padding: "10px 12px" }}>
+            <div style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 3 }}>{s.label}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: s.color }}>{s.icon} {s.value}</div>
+          </Card>
+        ))}
+      </div>
+
+      {/* Assignee velocity table */}
+      <Card style={{ padding: "14px 16px" }}>
+        <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>👥 Team Velocity</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {Object.entries(assigneeStats)
+            .sort((a, b) => b[1].total - a[1].total)
+            .map(([name, s]) => {
+              const pct = s.total > 0 ? Math.round((s.done / s.total) * 100) : 0;
+              return (
+                <div key={name} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ width: 120, fontSize: 12, color: "var(--text)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flexShrink: 0 }}>
+                    {name === "Unassigned" ? <span style={{ color: "var(--red)" }}>Unassigned</span> : name.split(" ").slice(0, 2).join(" ")}
+                  </div>
+                  <div style={{ flex: 1, height: 14, background: "#f1f5f9", borderRadius: 7, overflow: "hidden", border: "1px solid var(--border)", position: "relative" }}>
+                    <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${pct}%`, background: pct >= 80 ? "#10b981" : pct >= 50 ? "#4f46e5" : "#f87171", borderRadius: 7 }} />
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", whiteSpace: "nowrap", minWidth: 80, textAlign: "right" }}>
+                    <strong style={{ color: "var(--text)" }}>{s.done}</strong>/{s.total} done · {pct}%
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+      </Card>
+
+      {/* Issue list */}
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <input
+          type="text" placeholder="🔍 Search issues…" value={search} onChange={(e) => setSearch(e.target.value)}
+          style={{ flex: "1 1 160px", minWidth: 0, padding: "8px 12px", background: "var(--surface)", border: "1px solid var(--border2)", borderRadius: "var(--radius-sm)", fontSize: 13, color: "var(--text)", outline: "none" }}
+        />
+        <div style={{ display: "flex", gap: 4 }}>
+          {(["status","assignee","type"] as const).map((g) => (
+            <button key={g} onClick={() => setGroupBy(g)} style={{
+              padding: "7px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer",
+              background: groupBy === g ? "var(--accent)" : "var(--surface)",
+              color: groupBy === g ? "#fff" : "var(--text-muted)",
+              border: groupBy === g ? "none" : "1px solid var(--border)",
+            }}>
+              {g === "status" ? "By Status" : g === "assignee" ? "By Assignee" : "By Type"}
+            </button>
+          ))}
+        </div>
+        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{filtered.length} issues</span>
+      </div>
+
+      {groupKeys.map((group) => {
+        const groupIssueList = groups[group];
+        const s = sc(group);
+        const doneInGroup = groupIssueList.filter((i) => i.status === "Done").length;
+        return (
+          <div key={group}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <span style={{ width: 10, height: 10, borderRadius: 3, background: s.dot, flexShrink: 0 }} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{group}</span>
+              <span style={{ background: "var(--surface2)", color: "var(--text-muted)", borderRadius: 20, padding: "1px 8px", fontSize: 11, fontWeight: 600 }}>
+                {groupIssueList.length}
+                {groupBy !== "status" && doneInGroup > 0 && ` · ${doneInGroup} done`}
+              </span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 12 }}>
+              {groupIssueList.map((issue) => {
+                const due = dueDateLabel(issue.duedate, issue.status);
+                const issDone = issue.status === "Done";
+                return (
+                  <Card key={issue.key} style={{ padding: "10px 14px", opacity: issDone ? 0.75 : 1, borderLeft: `3px solid ${sc(issue.status).dot}` }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                      <PriBadge priority={issue.priority} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginBottom: 3 }}>
+                          <span style={{ fontSize: 10, fontFamily: "monospace", color: "var(--text-muted)", fontWeight: 600 }}>{issue.key}</span>
+                          <span style={{
+                            fontSize: 10, fontWeight: 600, borderRadius: 10, padding: "1px 6px",
+                            background: issue.issuetype === "Bug" ? "#fee2e2" : issue.issuetype === "Epic" ? "#ede9fe" : "var(--surface2)",
+                            color: issue.issuetype === "Bug" ? "#dc2626" : issue.issuetype === "Epic" ? "#4f46e5" : "var(--text-muted)",
+                          }}>{issue.issuetype}</span>
+                        </div>
+                        <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.4, textDecoration: issDone ? "line-through" : "none", opacity: issDone ? 0.6 : 1 }}>
+                          {issue.summary}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: "6px 12px", flexWrap: "wrap", alignItems: "center", marginTop: 6 }}>
+                      <Badge status={issue.status} />
+                      <span style={{ fontSize: 12, color: due.overdue ? "var(--red)" : "var(--text-muted)" }}>📅 {due.text}</span>
+                      <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                        👤 {issue.assignee || <span style={{ color: "var(--red)" }}>Unassigned</span>}
+                      </span>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+
+      <div style={{ fontSize: 11, color: "var(--text-muted)", textAlign: "center", paddingBottom: 4 }}>
+        Last updated {data.fetchedAt ? new Date(data.fetchedAt).toLocaleTimeString() : "—"}
+      </div>
+    </div>
+  );
+}
+
+// ─── To Do View ───────────────────────────────────────────────────────────────
+function ToDoView({ tasks }: { tasks: JiraTask[] }) {
+  const [filter, setFilter] = useState<"week" | "month">("week");
+  const now = new Date();
+
+  // Current week: Mon–Sun
+  const dow = now.getDay() === 0 ? 7 : now.getDay();
+  const weekStart = new Date(now); weekStart.setHours(0, 0, 0, 0); weekStart.setDate(now.getDate() - dow + 1);
+  const weekEnd   = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6); weekEnd.setHours(23, 59, 59, 999);
+
+  // Current month
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  function within24h(due: string | null) {
+    if (!due) return false;
+    const d = new Date(due).getTime();
+    const diff = d - now.getTime();
+    return diff >= 0 && diff <= 86_400_000;
+  }
+  function hoursLeft(due: string) {
+    return Math.ceil((new Date(due).getTime() - now.getTime()) / 3_600_000);
+  }
+
+  const overdueTasks = tasks.filter((t) => t.duedate && t.status !== "Done" && new Date(t.duedate) < now);
+
+  const dueTasks = tasks
+    .filter((t) => {
+      if (!t.duedate || t.status === "Done") return false;
+      const d = new Date(t.duedate);
+      return filter === "week" ? d >= weekStart && d <= weekEnd : d >= monthStart && d <= monthEnd;
+    })
+    .sort((a, b) => new Date(a.duedate!).getTime() - new Date(b.duedate!).getTime());
+
+  const urgentCount = dueTasks.filter((t) => within24h(t.duedate)).length;
+
+  function renderTask(t: JiraTask, alert?: boolean) {
+    const due = dueDateLabel(t.duedate, t.status);
+    const urgent = within24h(t.duedate);
+    const s = sc(t.status);
+    return (
+      <Card key={t.key} style={{ padding: "12px 14px", borderLeft: `3px solid ${urgent ? "#dc2626" : s.dot}`, background: urgent ? "#fff5f5" : "var(--surface)" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
+          <PriBadge priority={t.priority} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginBottom: 3 }}>
+              <span style={{ fontSize: 10, fontFamily: "monospace", color: "var(--text-muted)", fontWeight: 600 }}>{t.key}</span>
+              <span style={{ fontSize: 10, fontWeight: 600, color: t.issuetype === "Bug" ? "var(--red)" : "var(--text-muted)", background: t.issuetype === "Bug" ? "var(--red-light)" : "var(--surface2)", borderRadius: 10, padding: "1px 6px" }}>{t.issuetype}</span>
+              {urgent && (
+                <span style={{ fontSize: 10, fontWeight: 700, background: "#dc2626", color: "#fff", borderRadius: 20, padding: "1px 8px", animation: "pulse 1.5s ease-in-out infinite" }}>
+                  🔴 Due in {hoursLeft(t.duedate!)}h
+                </span>
+              )}
+              {alert && !urgent && (
+                <span style={{ fontSize: 10, fontWeight: 700, background: "#fef3c7", color: "#b45309", borderRadius: 20, padding: "1px 8px" }}>
+                  ⚠️ Overdue
+                </span>
+              )}
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text)", lineHeight: 1.4 }}>{t.summary}</div>
+            {t.parent && <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>📦 {t.parent}</div>}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: "6px 12px", flexWrap: "wrap", alignItems: "center" }}>
+          <Badge status={t.status} />
+          <span style={{ fontSize: 12, color: due.overdue ? "var(--red)" : urgent ? "#dc2626" : "var(--text-muted)", fontWeight: urgent ? 700 : 400 }}>📅 {due.text}</span>
+          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>👤 {t.assignee || <span style={{ color: "var(--red)" }}>Unassigned</span>}</span>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* Header + filter */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text)" }}>📌 Task To-Do List</div>
+        {urgentCount > 0 && (
+          <span style={{ background: "#dc2626", color: "#fff", borderRadius: 20, padding: "2px 10px", fontSize: 12, fontWeight: 700, animation: "pulse 1.5s ease-in-out infinite" }}>
+            🔴 {urgentCount} due within 24h!
+          </span>
+        )}
+        <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
+          {(["week", "month"] as const).map((f) => (
+            <button key={f} onClick={() => setFilter(f)} style={{ padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer", background: filter === f ? "var(--accent)" : "var(--surface)", color: filter === f ? "#fff" : "var(--text-muted)", border: filter === f ? "none" : "1px solid var(--border)" }}>
+              {f === "week" ? "This Week" : "This Month"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Overdue alert banner */}
+      {overdueTasks.length > 0 && (
+        <Card style={{ padding: "12px 16px", background: "#fff5f5", border: "1px solid #fca5a5" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 20 }}>🚨</span>
+            <div>
+              <div style={{ fontWeight: 700, color: "#dc2626", fontSize: 13 }}>{overdueTasks.length} overdue task{overdueTasks.length > 1 ? "s" : ""} need attention</div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                {overdueTasks.slice(0, 3).map((t) => t.key).join(", ")}{overdueTasks.length > 3 ? ` +${overdueTasks.length - 3} more` : ""}
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Due within 24h section */}
+      {dueTasks.filter((t) => within24h(t.duedate)).length > 0 && (
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#dc2626", marginBottom: 8 }}>
+            🔴 Due within 24 hours
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {dueTasks.filter((t) => within24h(t.duedate)).map((t) => renderTask(t))}
+          </div>
+        </div>
+      )}
+
+      {/* Upcoming tasks */}
+      {dueTasks.filter((t) => !within24h(t.duedate)).length > 0 ? (
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-muted)", marginBottom: 8 }}>
+            📅 Upcoming — {filter === "week" ? "This Week" : "This Month"} ({dueTasks.filter((t) => !within24h(t.duedate)).length})
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {dueTasks.filter((t) => !within24h(t.duedate)).map((t) => renderTask(t))}
+          </div>
+        </div>
+      ) : dueTasks.filter((t) => within24h(t.duedate)).length === 0 && (
+        <Card style={{ padding: 32, textAlign: "center" }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>🎉</div>
+          <div style={{ color: "var(--text-muted)", fontSize: 14 }}>No tasks due {filter === "week" ? "this week" : "this month"}.</div>
+        </Card>
+      )}
     </div>
   );
 }
