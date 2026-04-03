@@ -65,3 +65,84 @@ input, select { font-family: inherit; }
 .fade-in { animation: fadeIn 0.25s ease-out; }
 .spin { animation: spin 0.7s linear infinite; }
 .pulse { animation: pulse 1.5s ease-in-out infinite; }
+
+/* ── Mobile touch scrolling ── */
+.scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+.scroll-x::-webkit-scrollbar { display: none; }
+
+/* ── Nav tabs: horizontal scroll on mobile, no wrap ── */
+.nav-tabs {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  border-top: 1px solid var(--border);
+  flex-wrap: nowrap;
+}
+.nav-tabs::-webkit-scrollbar { display: none; }
+
+/* ── Sub-tabs ── */
+.sub-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 2px 0;
+  flex-wrap: nowrap;
+}
+.sub-tabs::-webkit-scrollbar { display: none; }
+
+/* ── Minimum touch targets ── */
+button { min-height: 36px; }
+
+/* ── Responsive grid helpers ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+/* ── Header top row ── */
+.header-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  flex-wrap: wrap;
+}
+
+/* ── Mobile overrides (≤ 640px) ── */
+@media (max-width: 640px) {
+  .hide-mobile { display: none !important; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .team-grid { grid-template-columns: 1fr 1fr; }
+  .project-grid { grid-template-columns: 1fr 1fr; }
+  .header-top { gap: 8px; padding: 8px 0; }
+  .main-content { padding: 12px !important; }
+}
+
+/* ── Very small screens (≤ 390px — iPhone SE etc.) ── */
+@media (max-width: 390px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .team-grid { grid-template-columns: 1fr; }
+  .nav-label { display: none; }
+}

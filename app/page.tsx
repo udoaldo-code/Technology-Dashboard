@@ -267,15 +267,13 @@ export default function Dashboard() {
       <header style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 1px 8px rgba(0,0,0,0.08)" }}>
         <div style={{ maxWidth: 1300, margin: "0 auto", padding: "0 16px" }}>
           {/* Top row */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", flexWrap: "wrap" }}>
+          <div className="header-top">
             {/* Logo */}
-            <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
               <Linkit360Logo />
-              <div style={{ width: 1, height: 30, background: "var(--border)", flexShrink: 0 }} />
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.02em", whiteSpace: "nowrap" }}>
-                  Executive Dashboard
-                </div>
+              <div style={{ width: 1, height: 28, background: "var(--border)", flexShrink: 0 }} className="hide-mobile" />
+              <div className="hide-mobile">
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.02em", whiteSpace: "nowrap" }}>Executive Dashboard</div>
                 <div style={{ fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap" }}>2026 Summary</div>
               </div>
             </div>
@@ -287,42 +285,42 @@ export default function Dashboard() {
               <ProjectSwitcher projects={projects} current={activeProject} onChange={handleProjectChange} />
             )}
 
-            {/* Refresh (jira/gantt only) */}
+            {/* Refresh */}
             {page !== "kpi" && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ fontSize: 11, color: "var(--text-muted)", textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div className="hide-mobile" style={{ fontSize: 11, color: "var(--text-muted)", textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
                   <span>↻ in <strong style={{ color: "var(--text)" }}>{formatCountdown(countdown)}</strong></span>
                   {lastRefresh && <span>{lastRefresh.toLocaleTimeString()}</span>}
                 </div>
                 <button
                   onClick={() => fetchData()}
                   disabled={loading}
-                  style={{ display: "flex", alignItems: "center", gap: 6, background: loading ? "var(--surface2)" : "var(--accent)", color: loading ? "var(--text-muted)" : "#fff", border: "none", borderRadius: "var(--radius-sm)", padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: loading ? "default" : "pointer" }}
+                  style={{ display: "flex", alignItems: "center", gap: 6, background: loading ? "var(--surface2)" : "var(--accent)", color: loading ? "var(--text-muted)" : "#fff", border: "none", borderRadius: "var(--radius-sm)", padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: loading ? "default" : "pointer", whiteSpace: "nowrap" }}
                 >
                   <span style={{ display: "inline-block", animation: loading ? "spin 0.7s linear infinite" : "none" }}>↻</span>
-                  {loading ? "Loading…" : "Refresh"}
+                  <span className="hide-mobile">{loading ? "Loading…" : "Refresh"}</span>
                 </button>
               </div>
             )}
           </div>
 
-          {/* Nav tabs */}
-          <div style={{ display: "flex", gap: 0, borderTop: "1px solid var(--border)" }}>
+          {/* Nav tabs — horizontally scrollable on mobile */}
+          <div className="nav-tabs">
             {NAV_ITEMS.map((item) => (
               <button
                 key={item.id}
                 onClick={() => setPage(item.id)}
                 style={{
-                  display: "flex", alignItems: "center", gap: 7, padding: "10px 16px",
+                  display: "flex", alignItems: "center", gap: 6, padding: "10px 14px",
                   background: "transparent", border: "none", cursor: "pointer",
                   color: page === item.id ? "var(--accent)" : "var(--text-muted)",
                   fontWeight: page === item.id ? 700 : 500, fontSize: 13,
                   borderBottom: page === item.id ? "2px solid var(--accent)" : "2px solid transparent",
-                  marginBottom: -1, transition: "all 0.15s", whiteSpace: "nowrap",
+                  marginBottom: -1, transition: "all 0.15s", whiteSpace: "nowrap", flexShrink: 0,
                 }}
               >
                 <span>{item.icon}</span>
-                <span>{item.label}</span>
+                <span className="nav-label">{item.label}</span>
               </button>
             ))}
           </div>
@@ -337,7 +335,7 @@ export default function Dashboard() {
       </header>
 
       {/* ── Page content ── */}
-      <main style={{ maxWidth: 1300, margin: "0 auto", padding: "20px 16px" }}>
+      <main className="main-content" style={{ maxWidth: 1300, margin: "0 auto", padding: "20px 16px" }}>
 
         {/* ══ KPI PAGE ══ */}
         {page === "kpi" && <KPIReport />}
@@ -373,7 +371,7 @@ export default function Dashboard() {
             </div>
 
             {/* Stats */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginBottom: 16 }}>
+            <div className="stats-grid">
               <StatCard label="Total Epics" value={epics.length} sub={`${pct}% done`} icon="📦" />
               <StatCard label="Completed" value={doneEpics.length} sub="Wins in 2026" color="var(--green)" icon="✅" />
               <StatCard label="In Progress" value={inProg.length} sub="Active now" color="var(--accent)" icon="⚙️" />
@@ -442,7 +440,7 @@ export default function Dashboard() {
             </div>
 
             {/* Tabs */}
-            <div style={{ display: "flex", gap: 4, marginBottom: 12, overflowX: "auto", padding: "2px 0" }}>
+            <div className="sub-tabs" style={{ marginBottom: 12 }}>
               {([["epics","Active Epics",filteredEpics.length],["tasks","Tasks",tasks.length],["wins","Wins 🏆",doneEpics.length],["sprint","Sprint Week ⚡",null],["todo","To Do 📌",null]] as const).map(([tab,label,count]) => (
                 <button key={tab} onClick={() => setActiveTab(tab)} style={{ display: "flex", alignItems: "center", gap: 6, background: activeTab === tab ? "var(--accent)" : "var(--surface)", color: activeTab === tab ? "#fff" : "var(--text-muted)", border: activeTab === tab ? "none" : "1px solid var(--border)", borderRadius: 20, padding: "7px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
                   {label}

@@ -176,8 +176,8 @@ function EstimationTable({ members, elapsedDays }: { members: VelocityMember[]; 
           </div>
         </div>
       </div>
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+      <div className="scroll-x">
+        <table style={{ width: "100%", minWidth: 600, borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ background: "var(--surface2)", borderBottom: "1px solid var(--border)" }}>
               {["Developer", "Assigned Tasks", `Total ${unit}`, `${unit} Done`, `${unit} Remaining`, "Est. Days to Complete"].map((h) => (
@@ -247,7 +247,7 @@ function ProjectSummaryRow({ projects }: { projects: ProjectSummary[] }) {
   return (
     <div>
       <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", marginBottom: 10 }}>🗂️ Per-Project Breakdown</div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 8 }}>
+      <div className="project-grid">
         {projects.map((p) => {
           const vc = velColor(p.velocity);
           return (
@@ -400,7 +400,7 @@ function VelocityToolbar({
     <div style={{ display: "flex", flexDirection: "column", gap: 10, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "12px 14px" }}>
       {/* Row 1: period tabs + project picker */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-        <div style={{ display: "flex", gap: 2, background: "var(--surface2)", borderRadius: 10, padding: 3, flexWrap: "wrap" }}>
+        <div className="scroll-x" style={{ display: "flex", gap: 2, background: "var(--surface2)", borderRadius: 10, padding: 3 }}>
           {PERIODS.map((p) => (
             <button
               key={p.id}
@@ -423,16 +423,16 @@ function VelocityToolbar({
 
       {/* Row 2: week picker */}
       {period === "weekly" && (
-        <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", flexShrink: 0, marginRight: 4 }}>Week:</span>
-          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", flexShrink: 0 }}>Week:</span>
+          <div className="scroll-x" style={{ display: "flex", gap: 4, flex: 1 }}>
             {Array.from({ length: currentWeek }, (_, i) => i + 1).map((w) => (
               <button
                 key={w}
                 onClick={() => onWeek(w)}
                 style={{
-                  padding: "4px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600,
-                  cursor: "pointer", border: "none",
+                  padding: "6px 11px", borderRadius: 20, fontSize: 12, fontWeight: 600,
+                  cursor: "pointer", border: "none", flexShrink: 0,
                   background: selectedWeek === w ? "var(--accent)" : w === currentWeek ? "var(--accent-light)" : "var(--bg)",
                   color: selectedWeek === w ? "#fff" : w === currentWeek ? "var(--accent)" : "var(--text-muted)",
                   outline: selectedWeek === w ? "none" : "1px solid var(--border)",
@@ -448,35 +448,38 @@ function VelocityToolbar({
 
       {/* Row 3: month picker */}
       {period === "monthly" && (
-        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", alignSelf: "center", marginRight: 4 }}>Month:</span>
-          {MONTH_NAMES.map((name, i) => {
-            const m = i + 1;
-            const isFuture = m > new Date().getMonth() + 1;
-            return (
-              <button
-                key={m}
-                onClick={() => !isFuture && onMonth(m)}
-                disabled={isFuture}
-                style={{
-                  padding: "4px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: isFuture ? "default" : "pointer", border: "none",
-                  background: selectedMonth === m ? "var(--accent)" : isFuture ? "var(--surface2)" : "var(--bg)",
-                  color: selectedMonth === m ? "#fff" : isFuture ? "var(--text-light)" : "var(--text-muted)",
-                  opacity: isFuture ? 0.5 : 1,
-                  outline: selectedMonth === m ? "none" : "1px solid var(--border)",
-                }}
-              >
-                {name}
-              </button>
-            );
-          })}
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", flexShrink: 0 }}>Month:</span>
+          <div className="scroll-x" style={{ display: "flex", gap: 4, flex: 1 }}>
+            {MONTH_NAMES.map((name, i) => {
+              const m = i + 1;
+              const isFuture = m > new Date().getMonth() + 1;
+              return (
+                <button
+                  key={m}
+                  onClick={() => !isFuture && onMonth(m)}
+                  disabled={isFuture}
+                  style={{
+                    padding: "6px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: isFuture ? "default" : "pointer", border: "none", flexShrink: 0,
+                    background: selectedMonth === m ? "var(--accent)" : isFuture ? "var(--surface2)" : "var(--bg)",
+                    color: selectedMonth === m ? "#fff" : isFuture ? "var(--text-light)" : "var(--text-muted)",
+                    opacity: isFuture ? 0.5 : 1,
+                    outline: selectedMonth === m ? "none" : "1px solid var(--border)",
+                  }}
+                >
+                  {name}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
       {/* Row 4: quarter picker */}
       {period === "quarterly" && (
-        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", alignSelf: "center", marginRight: 4 }}>Quarter:</span>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", flexShrink: 0 }}>Quarter:</span>
+          <div className="scroll-x" style={{ display: "flex", gap: 4, flex: 1 }}>
           {[1, 2, 3, 4].map((q) => {
             const currentQ = Math.floor(new Date().getMonth() / 3) + 1;
             const isFuture = q > currentQ;
@@ -487,7 +490,7 @@ function VelocityToolbar({
                 onClick={() => !isFuture && onQuarter(q)}
                 disabled={isFuture}
                 style={{
-                  padding: "6px 16px", borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: isFuture ? "default" : "pointer", border: "none",
+                  padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: isFuture ? "default" : "pointer", border: "none", flexShrink: 0,
                   background: selectedQuarter === q ? "var(--accent)" : isFuture ? "var(--surface2)" : "var(--bg)",
                   color: selectedQuarter === q ? "#fff" : isFuture ? "var(--text-light)" : "var(--text-muted)",
                   opacity: isFuture ? 0.5 : 1,
@@ -498,6 +501,7 @@ function VelocityToolbar({
               </button>
             );
           })}
+          </div>
         </div>
       )}
     </div>
@@ -627,16 +631,16 @@ export default function VelocityReport({ projectKey, allProjects }: { projectKey
               )}
             </div>
           </div>
-          <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             {[
-              { value: `${data.overallVelocity}%`, label: "overall velocity", color: velColor(data.overallVelocity) },
-              { value: data.totalIssues,   label: "total tasks",   color: "var(--text)" },
-              { value: data.totalDone,     label: "done",          color: "#059669" },
-              { value: data.totalIssues - data.totalDone, label: "remaining", color: "#dc2626" },
-              { value: data.members.length, label: "members",      color: "var(--text)" },
+              { value: `${data.overallVelocity}%`, label: "velocity", color: velColor(data.overallVelocity) },
+              { value: data.totalIssues,            label: "tasks",    color: "var(--text)" },
+              { value: data.totalDone,              label: "done",     color: "#059669" },
+              { value: data.totalIssues - data.totalDone, label: "left", color: "#dc2626" },
+              { value: data.members.length,         label: "members",  color: "var(--text)" },
             ].map((s) => (
-              <div key={s.label} style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 24, fontWeight: 900, color: s.color, lineHeight: 1 }}>{s.value}</div>
+              <div key={s.label} style={{ textAlign: "center", minWidth: 40 }}>
+                <div style={{ fontSize: 22, fontWeight: 900, color: s.color, lineHeight: 1 }}>{s.value}</div>
                 <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{s.label}</div>
               </div>
             ))}
@@ -660,7 +664,7 @@ export default function VelocityReport({ projectKey, allProjects }: { projectKey
       {/* ── Team summary ── */}
       <div>
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", marginBottom: 10 }}>📊 Team Summary</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
+        <div className="team-grid">
           {data.teamSummary.map((ts) => <TeamSummaryCard key={ts.team} {...ts} />)}
         </div>
       </div>
@@ -670,16 +674,18 @@ export default function VelocityReport({ projectKey, allProjects }: { projectKey
 
       {/* ── Per-member allocation ── */}
       <div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", flexShrink: 0 }}>👥 Developer Allocation</div>
-          <div style={{ flex: 1 }} />
-          <input
-            type="text" placeholder="🔍 Search member…" value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)}
-            style={{ padding: "7px 12px", background: "var(--surface)", border: "1px solid var(--border2)", borderRadius: "var(--radius-sm)", fontSize: 13, color: "var(--text)", outline: "none", width: 180 }}
-          />
-          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>👥 Developer Allocation</div>
+            <div style={{ flex: 1 }} />
+            <input
+              type="text" placeholder="🔍 Search…" value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)}
+              style={{ padding: "7px 12px", background: "var(--surface)", border: "1px solid var(--border2)", borderRadius: "var(--radius-sm)", fontSize: 13, color: "var(--text)", outline: "none", width: 140 }}
+            />
+          </div>
+          <div className="scroll-x" style={{ display: "flex", gap: 4 }}>
             {["All", ...allTeams].map((t) => (
-              <button key={t} onClick={() => setTeamFilter(t)} style={{ padding: "6px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", background: teamFilter === t ? "var(--accent)" : "var(--surface)", color: teamFilter === t ? "#fff" : "var(--text-muted)", border: teamFilter === t ? "none" : "1px solid var(--border)" }}>
+              <button key={t} onClick={() => setTeamFilter(t)} style={{ padding: "6px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0, background: teamFilter === t ? "var(--accent)" : "var(--surface)", color: teamFilter === t ? "#fff" : "var(--text-muted)", border: teamFilter === t ? "none" : "1px solid var(--border)" }}>
                 {t === "All" ? `All (${data.members.length})` : `${tc(t).icon} ${t}`}
               </button>
             ))}
