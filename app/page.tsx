@@ -7,10 +7,11 @@ import type { JiraDashboardData, JiraEpic, JiraTask } from "@/lib/jira";
 const GanttChart      = dynamic(() => import("@/app/components/GanttChart"),      { ssr: false });
 const KPIReport       = dynamic(() => import("@/app/components/KPIReport"),       { ssr: false });
 const VelocityReport  = dynamic(() => import("@/app/components/VelocityReport"),  { ssr: false });
+const EpicMDReport    = dynamic(() => import("@/app/components/EpicMDReport"),    { ssr: false });
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface Project { key: string; name: string; category: string | null; }
-type Page = "jira" | "gantt" | "kpi" | "velocity";
+type Page = "jira" | "gantt" | "kpi" | "velocity" | "epicmd";
 
 // ─── Status / Priority ──────────────────────────────────────────────────────
 const STATUS_CFG: Record<string, { color: string; bg: string; border: string; dot: string }> = {
@@ -259,6 +260,7 @@ export default function Dashboard() {
     { id: "gantt",    label: "Gantt Timeline",   icon: "📅", desc: "Delivery timeline" },
     { id: "kpi",      label: "KPI Report",       icon: "📊", desc: "Dept. performance" },
     { id: "velocity", label: "Velocity Report",  icon: "🚀", desc: "Team velocity & allocation" },
+    { id: "epicmd",   label: "Epic MD Report",   icon: "📋", desc: "Man-days per epic" },
   ];
 
   return (
@@ -280,8 +282,8 @@ export default function Dashboard() {
 
             <div style={{ flex: 1 }} />
 
-            {/* Project switcher — only for jira/gantt */}
-            {(page === "jira" || page === "gantt") && projects.length > 0 && (
+            {/* Project switcher */}
+            {(page === "jira" || page === "gantt" || page === "epicmd") && projects.length > 0 && (
               <ProjectSwitcher projects={projects} current={activeProject} onChange={handleProjectChange} />
             )}
 
@@ -347,6 +349,9 @@ export default function Dashboard() {
 
         {/* ══ VELOCITY REPORT ══ */}
         {page === "velocity" && <VelocityReport projectKey={activeProject} allProjects={projects} />}
+
+        {/* ══ EPIC MD REPORT ══ */}
+        {page === "epicmd" && <EpicMDReport projectKey={activeProject} allProjects={projects} />}
 
         {/* ══ JIRA DASHBOARD ══ */}
         {page === "jira" && (
