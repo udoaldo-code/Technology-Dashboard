@@ -7,12 +7,65 @@ const JIRA_BASE_URL  = process.env.JIRA_BASE_URL  || "https://linkit360.atlassia
 const JIRA_EMAIL     = process.env.JIRA_EMAIL     || "";
 const JIRA_API_TOKEN = process.env.JIRA_API_TOKEN || "";
 
+// Custom field IDs (discovered via /rest/api/3/field)
+const CF_MANDAYS      = "customfield_10434"; // Mandays (number)
+const CF_WORKING_DAYS = "customfield_10048"; // Working Days (number)
+const CF_START_DATE   = "customfield_10015"; // Start date
+const CF_NEW_START    = "customfield_10578"; // New Start Date
+const CF_TARGET_START = "customfield_10028"; // Target start
+
 function authHeaders() {
   const token = Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString("base64");
   return { Authorization: `Basic ${token}`, Accept: "application/json", "Content-Type": "application/json" };
 }
 
-// ── JQL search (POST, cursor-based) ──────────────────────────────────────────
+// ── Working-days calculation (Mon–Fri, no public-holiday awareness) ───────────
+function workingDaysBetween(startIso: string, endIso: string): number {
+  const start = new Date(startIso);
+  const end   = new Date(endIso);
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
+  // Ensure start ≤ end
+  if (start > end) return 0;
+  let count = 0;
+  const cur = new Date(start);
+  cur.setHours(0, 0, 0, 0);
+  const fin = new Date(end);
+  fin.setHours(0, 0, 0, 0);
+  while (cur <= fin) {
+    const dow = cur.getDay();
+    if (dow !== 0 && dow !== 6) count++; // Mon–Fri
+    cur.setDate(cur.getDate() + 1);
+  }
+  return Math.max(count, 1); // at least 1 day
+}
+
+// ── Resolve man-days for a raw Jira issue ─────────────────────────────────────
+type MDSource = "mandays_field" | "working_days_field" | "date_range" | "default";
+
+function resolveTaskMD(fields: any): { md: number; source: MDSource; startDate: string | null; duedate: string | null } {
+  // Priority 1: explicit Mandays field
+  if (fields[CF_MANDAYS] != null && Number(fields[CF_MANDAYS]) > 0) {
+    return { md: Number(fields[CF_MANDAYS]), source: "mandays_field", startDate: fields[CF_START_DATE] || fields[CF_NEW_START] || fields[CF_TARGET_START] || null, duedate: fields.duedate || null };
+  }
+  // Priority 2: Working Days field
+  if (fields[CF_WORKING_DAYS] != null && Number(fields[CF_WORKING_DAYS]) > 0) {
+    return { md: Number(fields[CF_WORKING_DAYS]), source: "working_days_field", startDate: fields[CF_START_DATE] || fields[CF_NEW_START] || fields[CF_TARGET_START] || null, duedate: fields.duedate || null };
+  }
+  // Priority 3: calculate from start → due date
+  const startDate = fields[CF_START_DATE] || fields[CF_NEW_START] || fields[CF_TARGET_START] || null;
+  const duedate   = fields.duedate || null;
+  if (startDate && duedate) {
+    return { md: workingDaysBetween(startDate, duedate), source: "date_range", startDate, duedate };
+  }
+  // Priority 4: just due date – today
+  if (duedate) {
+    const today = new Date().toISOString().slice(0, 10);
+    return { md: workingDaysBetween(today, duedate), source: "date_range", startDate: today, duedate };
+  }
+  return { md: 0, source: "default", startDate: null, duedate: null };
+}
+
+// ── JQL search ────────────────────────────────────────────────────────────────
 async function searchJQL(jql: string, fields: string[]): Promise<any[]> {
   const url = `${JIRA_BASE_URL}/rest/api/3/search/jql`;
   const all: any[] = [];
@@ -31,7 +84,7 @@ async function searchJQL(jql: string, fields: string[]): Promise<any[]> {
   return all;
 }
 
-// ── Board / sprint helpers (to derive elapsed days for throughput) ────────────
+// ── Board / sprint helpers ────────────────────────────────────────────────────
 async function getBoardId(projectKey: string): Promise<number | null> {
   const res = await fetch(
     `${JIRA_BASE_URL}/rest/agile/1.0/board?projectKeyOrId=${projectKey}&maxResults=5`,
@@ -59,7 +112,10 @@ export interface EpicTask {
   status: string;
   issuetype: string;
   assignee: string | null;
-  points: number | null;   // story points → man-days (1 SP = 1 MD)
+  startDate: string | null;
+  duedate: string | null;
+  manDays: number;
+  mdSource: "mandays_field" | "working_days_field" | "date_range" | "default";
 }
 
 export interface EpicMD {
@@ -69,34 +125,30 @@ export interface EpicMD {
   priority: string;
   assignee: string | null;
   duedate: string | null;
+  startDate: string | null;
+  epicManDays: number;            // MD from the epic-level field (if any)
+  epicMDSource: "mandays_field" | "working_days_field" | "date_range" | "default";
   tasks: EpicTask[];
   totalTasks: number;
   doneTasks: number;
-  // man-days
-  totalMD: number;
+  totalMD: number;                // sum of task MDs (preferred) or epic MD
   doneMD: number;
   remainingMD: number;
   completionPct: number;
-  // estimate
   estDaysToComplete: number | null;
 }
 
-export interface EpicMDReport {
+export interface EpicMDSummary {
   projectKeys: string[];
   sprintName: string;
   sprintElapsedDays: number;
-  // totals
   totalEpics: number;
   totalMD: number;
   doneMD: number;
   remainingMD: number;
   overallPct: number;
-  // team throughput
-  teamDailyMD: number | null;    // MD/day based on sprint velocity
-  mdUnit: "SP" | "tasks";
-  // project estimate
+  teamDailyMD: number | null;
   estDaysAllEpics: number | null;
-  // per-epic rows
   epics: EpicMD[];
   fetchedAt: string;
 }
@@ -108,51 +160,34 @@ export async function GET(request: Request) {
     const projectsParam = searchParams.get("projects") || searchParams.get("project") || "IV";
     const projectKeys   = projectsParam.split(",").map((k) => k.trim()).filter(Boolean);
 
-    // Fetch epics (2026) for all selected projects in parallel
     const projectClause = projectKeys.length === 1
       ? `project = "${projectKeys[0]}"`
       : `project in (${projectKeys.map((k) => `"${k}"`).join(",")})`;
 
+    const taskFields = [
+      "summary", "status", "issuetype", "assignee", "parent", "duedate",
+      CF_MANDAYS, CF_WORKING_DAYS, CF_START_DATE, CF_NEW_START, CF_TARGET_START,
+    ];
+
+    const epicFields = [
+      "summary", "status", "priority", "assignee", "duedate",
+      CF_MANDAYS, CF_WORKING_DAYS, CF_START_DATE, CF_NEW_START, CF_TARGET_START,
+    ];
+
     const [epicIssues, taskIssues] = await Promise.all([
       searchJQL(
         `${projectClause} AND issuetype = Epic AND created >= "2026-01-01" ORDER BY duedate ASC`,
-        ["summary", "status", "priority", "assignee", "duedate"]
+        epicFields
       ),
       searchJQL(
         `${projectClause} AND issuetype != Epic AND created >= "2026-01-01" ORDER BY parent ASC`,
-        ["summary", "status", "issuetype", "assignee", "customfield_10016", "parent"]
+        taskFields
       ),
     ]);
 
-    // Map tasks keyed by parent epic key
-    const tasksByEpic: Record<string, EpicTask[]> = {};
-    for (const i of taskIssues) {
-      const epicKey = i.fields.parent?.key;
-      if (!epicKey) continue;
-      if (!tasksByEpic[epicKey]) tasksByEpic[epicKey] = [];
-      tasksByEpic[epicKey].push({
-        key:       i.key,
-        summary:   i.fields.summary || "",
-        status:    i.fields.status?.name || "Unknown",
-        issuetype: i.fields.issuetype?.name || "Task",
-        assignee:  i.fields.assignee?.displayName || null,
-        points:    i.fields.customfield_10016 || null,
-      });
-    }
-
-    // Decide unit: use SP if at least 30% of tasks have points
-    const tasksWithSP = taskIssues.filter((i: any) => i.fields.customfield_10016 > 0).length;
-    const usesSP = taskIssues.length > 0 && (tasksWithSP / taskIssues.length) >= 0.3;
-    const mdUnit: "SP" | "tasks" = usesSP ? "SP" : "tasks";
-
-    function taskMD(t: EpicTask): number {
-      return usesSP ? (t.points || 1) : 1;
-    }
-
-    // Sprint elapsed days for throughput calculation (use first project's board)
+    // Sprint elapsed days
     let sprintName = "";
     let sprintElapsedDays = 0;
-
     try {
       const boardId = await getBoardId(projectKeys[0]);
       if (boardId) {
@@ -170,18 +205,47 @@ export async function GET(request: Request) {
         }
       }
     } catch (_) { /* non-critical */ }
-
     if (sprintElapsedDays === 0) sprintElapsedDays = 1;
+
+    // Map tasks by parent epic key
+    const tasksByEpic: Record<string, EpicTask[]> = {};
+    for (const i of taskIssues) {
+      const epicKey = i.fields.parent?.key;
+      if (!epicKey) continue;
+      if (!tasksByEpic[epicKey]) tasksByEpic[epicKey] = [];
+      const { md, source, startDate, duedate } = resolveTaskMD(i.fields);
+      tasksByEpic[epicKey].push({
+        key:       i.key,
+        summary:   i.fields.summary || "",
+        status:    i.fields.status?.name || "Unknown",
+        issuetype: i.fields.issuetype?.name || "Task",
+        assignee:  i.fields.assignee?.displayName || null,
+        startDate,
+        duedate,
+        manDays: md,
+        mdSource: source,
+      });
+    }
 
     // Build per-epic rows
     const epics: EpicMD[] = epicIssues.map((i: any) => {
-      const key     = i.key;
-      const tasks   = tasksByEpic[key] || [];
-      const totalMD = tasks.reduce((s, t) => s + taskMD(t), 0);
-      const doneMD  = tasks.filter((t) => t.status === "Done").reduce((s, t) => s + taskMD(t), 0);
+      const key   = i.key;
+      const tasks = tasksByEpic[key] || [];
+
+      // Epic-level man-days (used as fallback if no tasks)
+      const { md: epicMD, source: epicMDSource, startDate: epicStart } = resolveTaskMD(i.fields);
+
+      // Prefer sum of task MDs; fall back to epic-level MD
+      const totalMD = tasks.length > 0
+        ? tasks.reduce((s, t) => s + t.manDays, 0)
+        : epicMD;
+      const doneMD  = tasks.filter((t) => t.status === "Done").reduce((s, t) => s + t.manDays, 0);
       const remainingMD = totalMD - doneMD;
       const doneTasks   = tasks.filter((t) => t.status === "Done").length;
-      const completionPct = totalMD > 0 ? Math.round((doneMD / totalMD) * 100) : (tasks.length === 0 ? 0 : Math.round((doneTasks / tasks.length) * 100));
+      const completionPct = totalMD > 0
+        ? Math.round((doneMD / totalMD) * 100)
+        : tasks.length > 0 ? Math.round((doneTasks / tasks.length) * 100) : 0;
+
       return {
         key,
         summary:   i.fields.summary || "",
@@ -189,6 +253,9 @@ export async function GET(request: Request) {
         priority:  i.fields.priority?.name || "Medium",
         assignee:  i.fields.assignee?.displayName || null,
         duedate:   i.fields.duedate || null,
+        startDate: epicStart || i.fields[CF_START_DATE] || i.fields[CF_NEW_START] || null,
+        epicManDays: epicMD,
+        epicMDSource,
         tasks,
         totalTasks: tasks.length,
         doneTasks,
@@ -196,44 +263,32 @@ export async function GET(request: Request) {
         doneMD,
         remainingMD,
         completionPct,
-        estDaysToComplete: null, // filled below
+        estDaysToComplete: null,
       };
     });
 
-    // Team throughput from sprint: total doneMD across all tasks / elapsed days
-    const allDoneMD = taskIssues
-      .filter((i: any) => i.fields.status?.name === "Done")
-      .reduce((s: number, i: any) => s + (usesSP ? (i.fields.customfield_10016 || 1) : 1), 0);
+    // Team throughput: total doneMD / elapsed sprint days
+    const allDoneMD = epics.reduce((s, e) => s + e.doneMD, 0);
     const teamDailyMD = sprintElapsedDays > 0 && allDoneMD > 0
       ? Math.round((allDoneMD / sprintElapsedDays) * 100) / 100
       : null;
 
-    // Fill per-epic estimate
+    // Fill per-epic estimates: est days = remaining man-days (1 MD = 1 working day)
     for (const epic of epics) {
-      if (epic.remainingMD === 0) {
-        epic.estDaysToComplete = 0;
-      } else if (teamDailyMD && teamDailyMD > 0) {
-        epic.estDaysToComplete = Math.ceil(epic.remainingMD / teamDailyMD);
-      }
+      epic.estDaysToComplete = epic.remainingMD;
     }
 
-    // Totals
     const totalMD     = epics.reduce((s, e) => s + e.totalMD, 0);
     const doneMD      = epics.reduce((s, e) => s + e.doneMD, 0);
     const remainingMD = totalMD - doneMD;
     const overallPct  = totalMD > 0 ? Math.round((doneMD / totalMD) * 100) : 0;
-    const estDaysAllEpics = teamDailyMD && teamDailyMD > 0 && remainingMD > 0
-      ? Math.ceil(remainingMD / teamDailyMD)
-      : remainingMD === 0 ? 0 : null;
+    const estDaysAllEpics = remainingMD;
 
-    const payload: EpicMDReport = {
-      projectKeys,
-      sprintName,
-      sprintElapsedDays,
+    const payload: EpicMDSummary = {
+      projectKeys, sprintName, sprintElapsedDays,
       totalEpics: epics.length,
       totalMD, doneMD, remainingMD, overallPct,
-      teamDailyMD, mdUnit,
-      estDaysAllEpics,
+      teamDailyMD, estDaysAllEpics,
       epics,
       fetchedAt: new Date().toISOString(),
     };
