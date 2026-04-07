@@ -84,6 +84,27 @@ async function searchJQL(jql: string, fields: string[]): Promise<any[]> {
   return all;
 }
 
+// ── Jira group membership ─────────────────────────────────────────────────────
+async function getGroupMembers(groupName: string): Promise<Set<string>> {
+  const names = new Set<string>();
+  let startAt = 0;
+  const maxResults = 50;
+  while (true) {
+    const res = await fetch(
+      `${JIRA_BASE_URL}/rest/api/3/group/member?groupname=${encodeURIComponent(groupName)}&maxResults=${maxResults}&startAt=${startAt}`,
+      { headers: authHeaders(), next: { revalidate: 0 } }
+    );
+    if (!res.ok) break;
+    const data = await res.json();
+    for (const m of data.values ?? []) {
+      if (m.displayName) names.add(m.displayName);
+    }
+    if (data.isLast || (data.values?.length ?? 0) < maxResults) break;
+    startAt += maxResults;
+  }
+  return names;
+}
+
 // ── Board / sprint helpers ────────────────────────────────────────────────────
 async function getBoardId(projectKey: string): Promise<number | null> {
   const res = await fetch(
@@ -118,6 +139,10 @@ export interface EpicTask {
   mdSource: "mandays_field" | "working_days_field" | "date_range" | "default";
 }
 
+// ── Hour-based velocity constants ─────────────────────────────────────────────
+export const HOURS_PER_MD          = 8;    // 1 MD = 8 hours
+export const EFFECTIVE_HOURS_PER_DAY = 5.6; // 8h × 0.7 availability factor
+
 export interface EpicMD {
   key: string;
   summary: string;
@@ -132,10 +157,14 @@ export interface EpicMD {
   totalTasks: number;
   doneTasks: number;
   totalMD: number;                // sum of task MDs (preferred) or epic MD
+  totalHours: number;             // totalMD × 8
   doneMD: number;
   remainingMD: number;
+  remainingHours: number;         // remainingMD × 8
+  devCount: number;               // unique assignees in this epic (display only)
+  assignees: string[];            // list of unique assignee names in this epic
   completionPct: number;
-  estDaysToComplete: number | null;
+  estDaysToComplete: number | null; // remainingHours / (5.6 × totalDevCount)
 }
 
 export interface EpicMDSummary {
@@ -144,11 +173,15 @@ export interface EpicMDSummary {
   sprintElapsedDays: number;
   totalEpics: number;
   totalMD: number;
+  totalHours: number;
   doneMD: number;
   remainingMD: number;
+  remainingHours: number;
+  allAssignees: string[];         // sorted unique developer names across all epics
+  totalDevCount: number;
   overallPct: number;
   teamDailyMD: number | null;
-  estDaysAllEpics: number | null;
+  estDaysAllEpics: number | null; // totalRemainingHours / (5.6 × totalDevCount)
   epics: EpicMD[];
   fetchedAt: string;
 }
@@ -174,7 +207,7 @@ export async function GET(request: Request) {
       CF_MANDAYS, CF_WORKING_DAYS, CF_START_DATE, CF_NEW_START, CF_TARGET_START,
     ];
 
-    const [epicIssues, taskIssues] = await Promise.all([
+    const [epicIssues, taskIssues, developerGroup] = await Promise.all([
       searchJQL(
         `${projectClause} AND issuetype = Epic AND created >= "2026-01-01" ORDER BY duedate ASC`,
         epicFields
@@ -183,6 +216,7 @@ export async function GET(request: Request) {
         `${projectClause} AND issuetype != Epic AND created >= "2026-01-01" ORDER BY parent ASC`,
         taskFields
       ),
+      getGroupMembers("developer"),
     ]);
 
     // Sprint elapsed days
@@ -227,6 +261,16 @@ export async function GET(request: Request) {
       });
     }
 
+    // Pre-compute global unique assignees filtered to "developer" group members only
+    const allAssigneesRaw = Array.from(
+      new Set(taskIssues.map((i: any) => i.fields.assignee?.displayName).filter(Boolean))
+    ) as string[];
+    // Only count assignees who are in the Jira "developer" group
+    const allAssignees = allAssigneesRaw
+      .filter((name) => developerGroup.size === 0 || developerGroup.has(name))
+      .sort();
+    const totalDevCount = Math.max(allAssignees.length, 1);
+
     // Build per-epic rows
     const epics: EpicMD[] = epicIssues.map((i: any) => {
       const key   = i.key;
@@ -246,6 +290,20 @@ export async function GET(request: Request) {
         ? Math.round((doneMD / totalMD) * 100)
         : tasks.length > 0 ? Math.round((doneTasks / tasks.length) * 100) : 0;
 
+      const assignees = Array.from(
+        new Set(tasks.map((t) => t.assignee).filter(Boolean))
+      )
+        .filter((name) => developerGroup.size === 0 || developerGroup.has(name as string))
+        .sort() as string[];
+      const devCount = assignees.length;
+
+      const totalHours    = Math.round(totalMD * HOURS_PER_MD * 10) / 10;
+      const remainingHours = Math.round(remainingMD * HOURS_PER_MD * 10) / 10;
+      // estDays uses global totalDevCount (full team capacity)
+      const estDaysToComplete = remainingMD === 0
+        ? 0
+        : Math.ceil(remainingHours / (EFFECTIVE_HOURS_PER_DAY * totalDevCount));
+
       return {
         key,
         summary:   i.fields.summary || "",
@@ -260,10 +318,14 @@ export async function GET(request: Request) {
         totalTasks: tasks.length,
         doneTasks,
         totalMD,
+        totalHours,
         doneMD,
         remainingMD,
+        remainingHours,
+        devCount,
+        assignees,
         completionPct,
-        estDaysToComplete: null,
+        estDaysToComplete,
       };
     });
 
@@ -273,21 +335,22 @@ export async function GET(request: Request) {
       ? Math.round((allDoneMD / sprintElapsedDays) * 100) / 100
       : null;
 
-    // Fill per-epic estimates: est days = remaining man-days (1 MD = 1 working day)
-    for (const epic of epics) {
-      epic.estDaysToComplete = epic.remainingMD;
-    }
+    const totalMD       = epics.reduce((s, e) => s + e.totalMD, 0);
+    const totalHours    = Math.round(totalMD * HOURS_PER_MD * 10) / 10;
+    const doneMD        = epics.reduce((s, e) => s + e.doneMD, 0);
+    const remainingMD   = totalMD - doneMD;
+    const remainingHours = Math.round(remainingMD * HOURS_PER_MD * 10) / 10;
+    const overallPct    = totalMD > 0 ? Math.round((doneMD / totalMD) * 100) : 0;
 
-    const totalMD     = epics.reduce((s, e) => s + e.totalMD, 0);
-    const doneMD      = epics.reduce((s, e) => s + e.doneMD, 0);
-    const remainingMD = totalMD - doneMD;
-    const overallPct  = totalMD > 0 ? Math.round((doneMD / totalMD) * 100) : 0;
-    const estDaysAllEpics = remainingMD;
+    const estDaysAllEpics = remainingMD === 0
+      ? 0
+      : Math.ceil(remainingHours / (EFFECTIVE_HOURS_PER_DAY * totalDevCount));
 
     const payload: EpicMDSummary = {
       projectKeys, sprintName, sprintElapsedDays,
       totalEpics: epics.length,
-      totalMD, doneMD, remainingMD, overallPct,
+      totalMD, totalHours, doneMD, remainingMD, remainingHours,
+      allAssignees, totalDevCount, overallPct,
       teamDailyMD, estDaysAllEpics,
       epics,
       fetchedAt: new Date().toISOString(),

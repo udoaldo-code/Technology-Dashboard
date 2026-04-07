@@ -57,6 +57,35 @@ function MDSourceBadge({ source }: { source: "mandays_field" | "working_days_fie
   );
 }
 
+// ── Developer summary panel ───────────────────────────────────────────────────
+function DevSummary({ data }: { data: EpicMDSummary }) {
+  if (!data.allAssignees.length) return null;
+  const initials = (name: string) => name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+  const colors = ["#7c3aed", "#2563eb", "#059669", "#d97706", "#dc2626", "#0891b2", "#b45309", "#4f46e5"];
+  return (
+    <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow-sm)", padding: "14px 18px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <span style={{ fontSize: 13 }}>👥</span>
+        <span style={{ fontWeight: 700, fontSize: 13, color: "var(--text)" }}>Team</span>
+        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>— {data.totalDevCount} member{data.totalDevCount !== 1 ? "s" : ""} of <strong style={{ color: "var(--text)" }}>developer</strong> group · used in all est. days calculations</span>
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {data.allAssignees.map((name, idx) => {
+          const color = colors[idx % colors.length];
+          return (
+            <div key={name} style={{ display: "flex", alignItems: "center", gap: 7, background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 20, padding: "5px 10px 5px 5px" }}>
+              <div style={{ width: 26, height: 26, borderRadius: "50%", background: color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
+                {initials(name)}
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 500, color: "var(--text)" }}>{name}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Summary bar at the top ────────────────────────────────────────────────────
 function SummaryHeader({ data }: { data: EpicMDSummary }) {
   const barColor = data.overallPct >= 80 ? "#10b981" : data.overallPct >= 50 ? "#4f46e5" : "#f87171";
@@ -76,20 +105,22 @@ function SummaryHeader({ data }: { data: EpicMDSummary }) {
             </div>
           )}
           <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
-            Throughput: <strong style={{ color: "var(--text)" }}>
-              {data.teamDailyMD !== null ? `${data.teamDailyMD} MD/day` : "—"}
-            </strong>
+            <strong style={{ color: "var(--text)" }}>{data.totalDevCount}</strong> developer{data.totalDevCount !== 1 ? "s" : ""}
+            <span style={{ margin: "0 6px" }}>·</span>
+            <strong style={{ color: "var(--text)" }}>5.6 h</strong> effective/dev/day
+            <span style={{ margin: "0 6px" }}>·</span>
+            1 MD = 8 h
           </div>
         </div>
 
         {/* KPI chips */}
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
           {[
-            { v: data.totalEpics,       l: "epics",     c: "var(--text)" },
-            { v: `${data.overallPct}%`, l: "complete",  c: barColor },
-            { v: data.totalMD,          l: "total MD",  c: "var(--text)" },
-            { v: data.doneMD,           l: "done MD",   c: "#059669" },
-            { v: data.remainingMD,      l: "remaining", c: "#dc2626" },
+            { v: data.totalEpics,         l: "epics",      c: "var(--text)" },
+            { v: `${data.overallPct}%`,   l: "complete",   c: barColor },
+            { v: data.totalMD,            l: "total MD",   c: "var(--text)" },
+            { v: `${data.totalHours}h`,   l: "total hours",c: "#7c3aed" },
+            { v: data.remainingMD,        l: "remaining",  c: "#dc2626" },
           ].map((s) => (
             <div key={s.l} style={{ textAlign: "center", minWidth: 44 }}>
               <div style={{ fontSize: 22, fontWeight: 900, color: s.c, lineHeight: 1 }}>{s.v}</div>
@@ -103,7 +134,7 @@ function SummaryHeader({ data }: { data: EpicMDSummary }) {
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>
           <span>Overall Man-Day Completion</span>
-          <span>{data.doneMD} / {data.totalMD} MD</span>
+          <span>{data.doneMD} / {data.totalMD} MD ({data.remainingHours}h remaining)</span>
         </div>
         <div style={{ height: 10, background: "#f1f5f9", borderRadius: 5, overflow: "hidden", border: "1px solid var(--border)" }}>
           <div style={{ height: "100%", width: `${Math.min(data.overallPct, 100)}%`, background: `linear-gradient(90deg, ${barColor}, ${barColor}cc)`, borderRadius: 5, transition: "width 0.6s" }} />
@@ -121,7 +152,7 @@ function SummaryHeader({ data }: { data: EpicMDSummary }) {
                 : `~${data.estDaysAllEpics} working days to complete all epics`}
             </div>
             <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-              {data.estDaysAllEpics > 0 && `Based on ${data.teamDailyMD} MD/day team throughput · ${data.remainingMD} MD remaining`}
+              {data.estDaysAllEpics > 0 && `${data.remainingHours}h ÷ (5.6h × ${data.totalDevCount} dev${data.totalDevCount !== 1 ? "s" : ""}) = ~${data.estDaysAllEpics} days`}
             </div>
           </div>
           {data.estDaysAllEpics > 0 && (
@@ -144,7 +175,7 @@ function SummaryHeader({ data }: { data: EpicMDSummary }) {
 }
 
 // ── Epic row (expandable) ─────────────────────────────────────────────────────
-function EpicRow({ epic, rank }: { epic: EpicMD; rank: number }) {
+function EpicRow({ epic, rank, totalDevCount }: { epic: EpicMD; rank: number; totalDevCount: number }) {
   const [expanded, setExpanded] = useState(false);
   const barColor = epic.completionPct >= 80 ? "#10b981" : epic.completionPct >= 50 ? "#4f46e5" : "#f87171";
   const ec = estColor(epic.estDaysToComplete);
@@ -182,19 +213,26 @@ function EpicRow({ epic, rank }: { epic: EpicMD; rank: number }) {
 
         {/* MD chips row */}
         <div style={{ display: "flex", gap: "6px 14px", flexWrap: "wrap", alignItems: "center" }}>
-          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Total MD: <strong style={{ color: "var(--text)" }}>{epic.totalMD} MD</strong></span>
-          <span style={{ fontSize: 12, color: "#059669" }}>Done: <strong>{epic.doneMD}</strong></span>
-          <span style={{ fontSize: 12, color: "#dc2626" }}>Left: <strong>{epic.remainingMD}</strong></span>
+          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Total: <strong style={{ color: "var(--text)" }}>{epic.totalMD} MD ({epic.totalHours}h)</strong></span>
+          <span style={{ fontSize: 12, color: "#059669" }}>Done: <strong>{epic.doneMD} MD</strong></span>
+          <span style={{ fontSize: 12, color: "#dc2626" }}>Left: <strong>{epic.remainingMD} MD ({epic.remainingHours}h)</strong></span>
+          <span style={{ fontSize: 12, color: "#7c3aed" }}>👥 <strong>{epic.devCount}</strong> dev{epic.devCount !== 1 ? "s" : ""}</span>
           <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{epic.doneTasks}/{epic.totalTasks} tasks</span>
           {epic.tasks.length === 0 && epic.epicManDays > 0 && (
             <MDSourceBadge source={epic.epicMDSource} />
           )}
           {epic.estDaysToComplete !== null && (
             <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: ec }}>
-              {epic.estDaysToComplete === 0 ? "✅ Done" : `⏱ ~${epic.estDaysToComplete}d to complete`}
+              {epic.estDaysToComplete === 0 ? "✅ Done" : `⏱ ~${epic.estDaysToComplete}d`}
             </span>
           )}
         </div>
+        {/* Formula hint */}
+        {epic.estDaysToComplete !== null && epic.estDaysToComplete > 0 && (
+          <div style={{ fontSize: 10, color: "var(--text-light)", marginTop: 4 }}>
+            {epic.remainingHours}h ÷ (5.6h × {totalDevCount} dev{totalDevCount !== 1 ? "s" : ""}) = ~{epic.estDaysToComplete} days
+          </div>
+        )}
       </div>
 
       {/* Expanded task list */}
@@ -275,7 +313,7 @@ function SummaryTable({ data }: { data: EpicMDSummary }) {
         <table style={{ width: "100%", minWidth: 560, borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ background: "var(--surface2)", borderBottom: "1px solid var(--border)" }}>
-              {["#", "Epic", "Status", "Total MD", "Done MD", "Remaining", "Progress", "Est. Days"].map((h) => (
+              {["#", "Epic", "Status", "Total MD", "Total Hours", "Remaining Hours", "Devs", "Progress", "Est. Days"].map((h) => (
                 <th key={h} style={{ padding: "9px 12px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
               ))}
             </tr>
@@ -297,8 +335,9 @@ function SummaryTable({ data }: { data: EpicMDSummary }) {
                     </span>
                   </td>
                   <td style={{ padding: "10px 12px", fontWeight: 700, color: "var(--text)", textAlign: "center" }}>{epic.totalMD}</td>
-                  <td style={{ padding: "10px 12px", fontWeight: 700, color: "#059669", textAlign: "center" }}>{epic.doneMD}</td>
-                  <td style={{ padding: "10px 12px", fontWeight: 700, color: epic.remainingMD > 0 ? "#dc2626" : "#059669", textAlign: "center" }}>{epic.remainingMD}</td>
+                  <td style={{ padding: "10px 12px", fontWeight: 700, color: "#7c3aed", textAlign: "center" }}>{epic.totalHours}h</td>
+                  <td style={{ padding: "10px 12px", fontWeight: 700, color: epic.remainingMD > 0 ? "#dc2626" : "#059669", textAlign: "center" }}>{epic.remainingHours}h</td>
+                  <td style={{ padding: "10px 12px", textAlign: "center", color: "#7c3aed", fontWeight: 600 }}>{epic.devCount}</td>
                   <td style={{ padding: "10px 12px", minWidth: 100 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <div style={{ flex: 1, height: 6, background: "#f1f5f9", borderRadius: 3, overflow: "hidden" }}>
@@ -324,8 +363,9 @@ function SummaryTable({ data }: { data: EpicMDSummary }) {
             <tr style={{ background: "#f8fafc", borderTop: "2px solid var(--border2)" }}>
               <td colSpan={3} style={{ padding: "10px 12px", fontWeight: 800, fontSize: 13, color: "var(--text)" }}>TOTAL</td>
               <td style={{ padding: "10px 12px", fontWeight: 800, fontSize: 13, color: "var(--text)", textAlign: "center" }}>{data.totalMD}</td>
-              <td style={{ padding: "10px 12px", fontWeight: 800, fontSize: 13, color: "#059669", textAlign: "center" }}>{data.doneMD}</td>
-              <td style={{ padding: "10px 12px", fontWeight: 800, fontSize: 13, color: "#dc2626", textAlign: "center" }}>{data.remainingMD}</td>
+              <td style={{ padding: "10px 12px", fontWeight: 800, fontSize: 13, color: "#7c3aed", textAlign: "center" }}>{data.totalHours}h</td>
+              <td style={{ padding: "10px 12px", fontWeight: 800, fontSize: 13, color: "#dc2626", textAlign: "center" }}>{data.remainingHours}h</td>
+              <td style={{ padding: "10px 12px", fontWeight: 800, fontSize: 13, color: "#7c3aed", textAlign: "center" }}>{data.totalDevCount}</td>
               <td style={{ padding: "10px 12px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <div style={{ flex: 1, height: 6, background: "#f1f5f9", borderRadius: 3, overflow: "hidden" }}>
@@ -401,6 +441,9 @@ export default function EpicMDReportView({ projectKey, allProjects }: { projectK
       {/* Summary header */}
       <SummaryHeader data={data} />
 
+      {/* Developer summary */}
+      <DevSummary data={data} />
+
       {/* Filter + view toggle */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -435,7 +478,7 @@ export default function EpicMDReportView({ projectKey, allProjects }: { projectK
       {view === "cards" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {filtered.map((epic, i) => (
-            <EpicRow key={epic.key} epic={epic} rank={i + 1} />
+            <EpicRow key={epic.key} epic={epic} rank={i + 1} totalDevCount={data.totalDevCount} />
           ))}
           {!filtered.length && (
             <div style={{ padding: 32, textAlign: "center", color: "var(--text-muted)", background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
