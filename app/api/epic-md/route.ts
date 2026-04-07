@@ -173,15 +173,13 @@ export interface EpicMDSummary {
   sprintElapsedDays: number;
   totalEpics: number;
   totalMD: number;
-  totalHours: number;
   doneMD: number;
   remainingMD: number;
-  remainingHours: number;
+  remainingHours: number;         // remainingMD × 8 — basis for all est. days
   allAssignees: string[];         // sorted unique developer names across all epics
   totalDevCount: number;
   overallPct: number;
-  teamDailyMD: number | null;
-  estDaysAllEpics: number | null; // totalRemainingHours / (5.6 × totalDevCount)
+  estDaysAllEpics: number | null; // remainingHours / (5.6 × totalDevCount)
   epics: EpicMD[];
   fetchedAt: string;
 }
@@ -329,19 +327,14 @@ export async function GET(request: Request) {
       };
     });
 
-    // Team throughput: total doneMD / elapsed sprint days
-    const allDoneMD = epics.reduce((s, e) => s + e.doneMD, 0);
-    const teamDailyMD = sprintElapsedDays > 0 && allDoneMD > 0
-      ? Math.round((allDoneMD / sprintElapsedDays) * 100) / 100
-      : null;
-
-    const totalMD       = epics.reduce((s, e) => s + e.totalMD, 0);
-    const totalHours    = Math.round(totalMD * HOURS_PER_MD * 10) / 10;
-    const doneMD        = epics.reduce((s, e) => s + e.doneMD, 0);
-    const remainingMD   = totalMD - doneMD;
+    const totalMD        = epics.reduce((s, e) => s + e.totalMD, 0);
+    const doneMD         = epics.reduce((s, e) => s + e.doneMD, 0);
+    const remainingMD    = totalMD - doneMD;
+    // Only remaining (undone) hours drive the estimation — done tasks are excluded
     const remainingHours = Math.round(remainingMD * HOURS_PER_MD * 10) / 10;
-    const overallPct    = totalMD > 0 ? Math.round((doneMD / totalMD) * 100) : 0;
+    const overallPct     = totalMD > 0 ? Math.round((doneMD / totalMD) * 100) : 0;
 
+    // Est. days = remaining hours / (effective hours per day × total developers)
     const estDaysAllEpics = remainingMD === 0
       ? 0
       : Math.ceil(remainingHours / (EFFECTIVE_HOURS_PER_DAY * totalDevCount));
@@ -349,9 +342,9 @@ export async function GET(request: Request) {
     const payload: EpicMDSummary = {
       projectKeys, sprintName, sprintElapsedDays,
       totalEpics: epics.length,
-      totalMD, totalHours, doneMD, remainingMD, remainingHours,
+      totalMD, doneMD, remainingMD, remainingHours,
       allAssignees, totalDevCount, overallPct,
-      teamDailyMD, estDaysAllEpics,
+      estDaysAllEpics,
       epics,
       fetchedAt: new Date().toISOString(),
     };

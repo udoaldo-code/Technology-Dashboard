@@ -116,11 +116,12 @@ function SummaryHeader({ data }: { data: EpicMDSummary }) {
         {/* KPI chips */}
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
           {[
-            { v: data.totalEpics,         l: "epics",      c: "var(--text)" },
-            { v: `${data.overallPct}%`,   l: "complete",   c: barColor },
-            { v: data.totalMD,            l: "total MD",   c: "var(--text)" },
-            { v: `${data.totalHours}h`,   l: "total hours",c: "#7c3aed" },
-            { v: data.remainingMD,        l: "remaining",  c: "#dc2626" },
+            { v: data.totalEpics,            l: "epics",         c: "var(--text)" },
+            { v: `${data.overallPct}%`,      l: "complete",      c: barColor },
+            { v: data.totalMD,               l: "total MD",      c: "var(--text)" },
+            { v: data.doneMD,                l: "done MD",       c: "#059669" },
+            { v: `${data.remainingMD} MD`,   l: "remaining",     c: "#dc2626" },
+            { v: `${data.remainingHours}h`,  l: "hours left",    c: "#7c3aed" },
           ].map((s) => (
             <div key={s.l} style={{ textAlign: "center", minWidth: 44 }}>
               <div style={{ fontSize: 22, fontWeight: 900, color: s.c, lineHeight: 1 }}>{s.v}</div>
@@ -134,7 +135,7 @@ function SummaryHeader({ data }: { data: EpicMDSummary }) {
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>
           <span>Overall Man-Day Completion</span>
-          <span>{data.doneMD} / {data.totalMD} MD ({data.remainingHours}h remaining)</span>
+          <span>{data.doneMD} done · {data.remainingMD} remaining MD = {data.remainingHours}h left</span>
         </div>
         <div style={{ height: 10, background: "#f1f5f9", borderRadius: 5, overflow: "hidden", border: "1px solid var(--border)" }}>
           <div style={{ height: "100%", width: `${Math.min(data.overallPct, 100)}%`, background: `linear-gradient(90deg, ${barColor}, ${barColor}cc)`, borderRadius: 5, transition: "width 0.6s" }} />
@@ -152,7 +153,7 @@ function SummaryHeader({ data }: { data: EpicMDSummary }) {
                 : `~${data.estDaysAllEpics} working days to complete all epics`}
             </div>
             <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-              {data.estDaysAllEpics > 0 && `${data.remainingHours}h ÷ (5.6h × ${data.totalDevCount} dev${data.totalDevCount !== 1 ? "s" : ""}) = ~${data.estDaysAllEpics} days`}
+              {data.estDaysAllEpics > 0 && `${data.remainingMD} MD remaining × 8h ÷ (5.6h × ${data.totalDevCount} dev${data.totalDevCount !== 1 ? "s" : ""}) · done tasks excluded`}
             </div>
           </div>
           {data.estDaysAllEpics > 0 && (
@@ -313,7 +314,7 @@ function SummaryTable({ data }: { data: EpicMDSummary }) {
         <table style={{ width: "100%", minWidth: 560, borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ background: "var(--surface2)", borderBottom: "1px solid var(--border)" }}>
-              {["#", "Epic", "Status", "Total MD", "Total Hours", "Remaining Hours", "Devs", "Progress", "Est. Days"].map((h) => (
+              {["#", "Epic", "Status", "Total MD", "Done MD", "Remaining MD", "Hours Left", "Devs", "Progress", "Est. Days"].map((h) => (
                 <th key={h} style={{ padding: "9px 12px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
               ))}
             </tr>
@@ -335,8 +336,9 @@ function SummaryTable({ data }: { data: EpicMDSummary }) {
                     </span>
                   </td>
                   <td style={{ padding: "10px 12px", fontWeight: 700, color: "var(--text)", textAlign: "center" }}>{epic.totalMD}</td>
-                  <td style={{ padding: "10px 12px", fontWeight: 700, color: "#7c3aed", textAlign: "center" }}>{epic.totalHours}h</td>
-                  <td style={{ padding: "10px 12px", fontWeight: 700, color: epic.remainingMD > 0 ? "#dc2626" : "#059669", textAlign: "center" }}>{epic.remainingHours}h</td>
+                  <td style={{ padding: "10px 12px", fontWeight: 700, color: "#059669", textAlign: "center" }}>{epic.doneMD}</td>
+                  <td style={{ padding: "10px 12px", fontWeight: 700, color: epic.remainingMD > 0 ? "#dc2626" : "#059669", textAlign: "center" }}>{epic.remainingMD}</td>
+                  <td style={{ padding: "10px 12px", fontWeight: 700, color: "#7c3aed", textAlign: "center" }}>{epic.remainingHours}h</td>
                   <td style={{ padding: "10px 12px", textAlign: "center", color: "#7c3aed", fontWeight: 600 }}>{epic.devCount}</td>
                   <td style={{ padding: "10px 12px", minWidth: 100 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -363,8 +365,9 @@ function SummaryTable({ data }: { data: EpicMDSummary }) {
             <tr style={{ background: "#f8fafc", borderTop: "2px solid var(--border2)" }}>
               <td colSpan={3} style={{ padding: "10px 12px", fontWeight: 800, fontSize: 13, color: "var(--text)" }}>TOTAL</td>
               <td style={{ padding: "10px 12px", fontWeight: 800, fontSize: 13, color: "var(--text)", textAlign: "center" }}>{data.totalMD}</td>
-              <td style={{ padding: "10px 12px", fontWeight: 800, fontSize: 13, color: "#7c3aed", textAlign: "center" }}>{data.totalHours}h</td>
-              <td style={{ padding: "10px 12px", fontWeight: 800, fontSize: 13, color: "#dc2626", textAlign: "center" }}>{data.remainingHours}h</td>
+              <td style={{ padding: "10px 12px", fontWeight: 800, fontSize: 13, color: "#059669", textAlign: "center" }}>{data.doneMD}</td>
+              <td style={{ padding: "10px 12px", fontWeight: 800, fontSize: 13, color: "#dc2626", textAlign: "center" }}>{data.remainingMD}</td>
+              <td style={{ padding: "10px 12px", fontWeight: 800, fontSize: 13, color: "#7c3aed", textAlign: "center" }}>{data.remainingHours}h</td>
               <td style={{ padding: "10px 12px", fontWeight: 800, fontSize: 13, color: "#7c3aed", textAlign: "center" }}>{data.totalDevCount}</td>
               <td style={{ padding: "10px 12px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
