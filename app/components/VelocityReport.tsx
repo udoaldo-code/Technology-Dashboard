@@ -348,7 +348,7 @@ function MemberCard({ member }: { member: VelocityMember }) {
                 return (order.indexOf(a.status) === -1 ? 99 : order.indexOf(a.status)) - (order.indexOf(b.status) === -1 ? 99 : order.indexOf(b.status));
               })
               .map((task) => {
-                const s = sc(task.status); const isDone = task.status === "Done";
+                const s = sc(task.status); const n = task.status.toLowerCase().replace(/\s*\/\s*/g, "/").trim(); const isDone = n === "done" || n === "stg/ready to deploy";
                 return (
                   <div key={task.key} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "10px 12px", borderLeft: `3px solid ${s.dot}`, opacity: isDone ? 0.7 : 1 }}>
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>

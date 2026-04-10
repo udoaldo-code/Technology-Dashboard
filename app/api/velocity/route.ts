@@ -12,6 +12,12 @@ function authHeaders() {
   return { Authorization: `Basic ${token}`, Accept: "application/json" };
 }
 
+// ── Done-status check — case-insensitive, normalises spaces around slash ───────
+function isDoneStatus(status: string): boolean {
+  const n = status.toLowerCase().replace(/\s*\/\s*/g, "/").trim();
+  return n === "done" || n === "stg/ready to deploy";
+}
+
 // ── Team classification ───────────────────────────────────────────────────────
 const TEAM_MAP: Record<string, string> = {
   "ilham.nadhif":     "Business Analyst",
@@ -250,14 +256,14 @@ function buildMembers(issues: RawIssue[], elapsedDays: number): VelocityMember[]
   return Object.entries(memberMap)
     .map(([name, { tasks, team }]) => {
       const total      = tasks.length;
-      const done       = tasks.filter((t) => t.status === "Done").length;
+      const done       = tasks.filter((t) => isDoneStatus(t.status)).length;
       const inProgress = tasks.filter((t) => ["In Progress", "Testing QA"].includes(t.status)).length;
       const blocked    = tasks.filter((t) => ["Waiting telco", "On Hold", "Delay"].includes(t.status)).length;
       const toDo       = tasks.filter((t) => t.status === "To Do").length;
       const velocity   = total > 0 ? Math.round((done / total) * 100) : 0;
 
       const totalPoints     = tasks.reduce((s, t) => s + (t.points || 0), 0);
-      const donePoints      = tasks.filter((t) => t.status === "Done").reduce((s, t) => s + (t.points || 0), 0);
+      const donePoints      = tasks.filter((t) => isDoneStatus(t.status)).reduce((s, t) => s + (t.points || 0), 0);
       const remainingPoints = totalPoints - donePoints;
 
       const usesSP       = totalPoints > 0;
@@ -293,7 +299,7 @@ function buildProjectSummary(issues: RawIssue[], projectKeys: string[]): Project
   return projectKeys.map((key) => {
     const pIssues = issues.filter((i) => i.projectKey === key);
     const total      = pIssues.length;
-    const done       = pIssues.filter((i) => i.status === "Done").length;
+    const done       = pIssues.filter((i) => isDoneStatus(i.status)).length;
     const inProgress = pIssues.filter((i) => ["In Progress", "Testing QA"].includes(i.status)).length;
     const blocked    = pIssues.filter((i) => ["Waiting telco", "On Hold", "Delay"].includes(i.status)).length;
     return { key, total, done, inProgress, blocked, velocity: total > 0 ? Math.round((done / total) * 100) : 0 };
@@ -413,7 +419,7 @@ export async function GET(request: Request) {
 
     const projectSummary = buildProjectSummary(issues, projectKeys);
     const totalIssues    = issues.length;
-    const totalDone      = issues.filter((i) => i.status === "Done").length;
+    const totalDone      = issues.filter((i) => isDoneStatus(i.status)).length;
 
     const payload: VelocityData = {
       period, periodLabel, elapsedDays, totalPeriodDays,

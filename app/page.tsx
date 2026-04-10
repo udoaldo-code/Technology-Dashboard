@@ -31,8 +31,12 @@ function sc(status: string) {
 }
 
 // ─── Utils ───────────────────────────────────────────────────────────────────
+function isDone(status: string) {
+  const n = status.toLowerCase().replace(/\s*\/\s*/g, "/").trim();
+  return n === "done" || n === "stg/ready to deploy";
+}
 function isOverdue(due: string | null, status: string) {
-  return !!due && status !== "Done" && new Date(due) < new Date();
+  return !!due && !isDone(status) && new Date(due) < new Date();
 }
 function dueDateLabel(due: string | null, status: string) {
   if (!due) return { text: "No date", overdue: false };
@@ -60,7 +64,7 @@ function generateRisks(epics: JiraEpic[], tasks: JiraTask[]) {
   const unassigned = tasks.filter((t) => !t.assignee && t.status !== "Done");
   const waitingTelco = epics.filter((e) => e.status === "Waiting telco");
   const onHold = epics.filter((e) => e.status === "On Hold");
-  const dueSoon = epics.filter((e) => { if (!e.duedate || e.status === "Done") return false; const d = (new Date(e.duedate).getTime() - Date.now()) / 86400000; return d >= 0 && d <= 7; });
+  const dueSoon = epics.filter((e) => { if (!e.duedate || isDone(e.status)) return false; const d = (new Date(e.duedate).getTime() - Date.now()) / 86400000; return d >= 0 && d <= 7; });
   if (critDel.length) risks.push({ level: "critical", text: `${critDel.length} high-priority delayed epic${critDel.length > 1 ? "s" : ""} — SLA breach risk.` });
   if (overdueEps.length > 5) risks.push({ level: "critical", text: `${overdueEps.length} overdue epics — systemic delivery issue, capacity review needed.` });
   else if (overdueEps.length) risks.push({ level: "high", text: `${overdueEps.length} overdue epic${overdueEps.length > 1 ? "s" : ""} — partner relationship at risk.` });
@@ -79,7 +83,7 @@ function generateRecs(epics: JiraEpic[], tasks: JiraTask[]) {
   const unassigned = tasks.filter((t) => !t.assignee && t.status !== "Done");
   const waitingTelco = epics.filter((e) => e.status === "Waiting telco");
   const onHold = epics.filter((e) => e.status === "On Hold");
-  const done = epics.filter((e) => e.status === "Done");
+  const done = epics.filter((e) => isDone(e.status));
   if (delayed.length) recs.push(`Escalate ${delayed.length} delayed epic${delayed.length > 1 ? "s" : ""} — prioritize: ${delayed.slice(0, 2).map((e) => e.summary.replace(/^VAS Integration - /i, "").replace(/^Vas Integration - /i, "")).join(", ")}${delayed.length > 2 ? ` +${delayed.length - 2}` : ""}.`);
   if (bugs.length) recs.push(`Close ${bugs.length} open bugs before production deploy.`);
   if (unassigned.length) recs.push(`Assign ${unassigned.length} unassigned task${unassigned.length > 1 ? "s" : ""} — enforce mandatory assignee rule.`);
@@ -238,7 +242,7 @@ export default function Dashboard() {
 
   const epics  = data?.epics  || [];
   const tasks  = data?.tasks  || [];
-  const doneEpics  = epics.filter((e) => e.status === "Done");
+  const doneEpics  = epics.filter((e) => isDone(e.status));
   const inProg     = epics.filter((e) => e.status === "In Progress");
   const delayed    = epics.filter((e) => e.status === "Delay");
   const blocked    = epics.filter((e) => e.status === "On Hold" || e.status === "Waiting telco");
@@ -246,7 +250,7 @@ export default function Dashboard() {
   const pct        = epics.length > 0 ? Math.round((doneEpics.length / epics.length) * 100) : 0;
   const allStatuses = ["All", ...Array.from(new Set(epics.filter((e) => e.status !== "Done").map((e) => e.status))).sort()];
   const filteredEpics = epics.filter((e) => {
-    if (e.status === "Done") return false;
+    if (isDone(e.status)) return false;
     const ms = !epicSearch || e.summary.toLowerCase().includes(epicSearch.toLowerCase()) || e.key.toLowerCase().includes(epicSearch.toLowerCase());
     const mst = statusFilter === "All" || e.status === statusFilter;
     return ms && mst;
@@ -491,7 +495,7 @@ function EpicsView({ epics, tasks }: { epics: JiraEpic[]; tasks: JiraTask[] }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {epics.map((epic) => {
         const et = tasks.filter((t) => t.parentKey === epic.key || t.parent === epic.summary);
-        const dt = et.filter((t) => t.status === "Done").length;
+        const dt = et.filter((t) => isDone(t.status)).length;
         const tp = et.length > 0 ? Math.round((dt / et.length) * 100) : 0;
         const isExp = expanded === epic.key;
         const due = dueDateLabel(epic.duedate, epic.status);
@@ -656,7 +660,7 @@ function SprintView({ projectKey }: { projectKey: string }) {
 
   // Stats
   const total     = issues.length;
-  const done      = issues.filter((i) => i.status === "Done").length;
+  const done      = issues.filter((i) => isDone(i.status)).length;
   const inProg    = issues.filter((i) => i.status === "In Progress").length;
   const blocked   = issues.filter((i) => i.status === "Waiting telco" || i.status === "On Hold").length;
   const delayed   = issues.filter((i) => i.status === "Delay").length;
@@ -705,7 +709,7 @@ function SprintView({ projectKey }: { projectKey: string }) {
     const name = issue.assignee || "Unassigned";
     if (!assigneeStats[name]) assigneeStats[name] = { total: 0, done: 0, inprog: 0, blocked: 0 };
     assigneeStats[name].total++;
-    if (issue.status === "Done") assigneeStats[name].done++;
+    if (isDone(issue.status)) assigneeStats[name].done++;
     else if (issue.status === "In Progress" || issue.status === "Testing QA") assigneeStats[name].inprog++;
     else if (issue.status === "Waiting telco" || issue.status === "On Hold" || issue.status === "Delay") assigneeStats[name].blocked++;
   }
@@ -831,7 +835,7 @@ function SprintView({ projectKey }: { projectKey: string }) {
       {groupKeys.map((group) => {
         const groupIssueList = groups[group];
         const s = sc(group);
-        const doneInGroup = groupIssueList.filter((i) => i.status === "Done").length;
+        const doneInGroup = groupIssueList.filter((i) => isDone(i.status)).length;
         return (
           <div key={group}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
@@ -845,7 +849,7 @@ function SprintView({ projectKey }: { projectKey: string }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 12 }}>
               {groupIssueList.map((issue) => {
                 const due = dueDateLabel(issue.duedate, issue.status);
-                const issDone = issue.status === "Done";
+                const issDone = isDone(issue.status);
                 return (
                   <Card key={issue.key} style={{ padding: "10px 14px", opacity: issDone ? 0.75 : 1, borderLeft: `3px solid ${sc(issue.status).dot}` }}>
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
@@ -914,7 +918,7 @@ function ToDoView({ tasks }: { tasks: JiraTask[] }) {
 
   const dueTasks = tasks
     .filter((t) => {
-      if (!t.duedate || t.status === "Done") return false;
+      if (!t.duedate || isDone(t.status)) return false;
       const d = new Date(t.duedate);
       return filter === "week" ? d >= weekStart && d <= weekEnd : d >= monthStart && d <= monthEnd;
     })

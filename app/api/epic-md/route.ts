@@ -207,7 +207,7 @@ export async function GET(request: Request) {
 
     const [epicIssues, taskIssues, developerGroup] = await Promise.all([
       searchJQL(
-        `${projectClause} AND issuetype = Epic AND created >= "2026-01-01" ORDER BY duedate ASC`,
+        `${projectClause} AND issuetype = Epic AND status != "Dropped" AND created >= "2026-01-01" ORDER BY duedate ASC`,
         epicFields
       ),
       searchJQL(
