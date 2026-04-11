@@ -8,10 +8,11 @@ const GanttChart      = dynamic(() => import("@/app/components/GanttChart"),    
 const KPIReport       = dynamic(() => import("@/app/components/KPIReport"),       { ssr: false });
 const VelocityReport  = dynamic(() => import("@/app/components/VelocityReport"),  { ssr: false });
 const EpicMDReport    = dynamic(() => import("@/app/components/EpicMDReport"),    { ssr: false });
+const DataGapSummary  = dynamic(() => import("@/app/components/DataGapSummary"),  { ssr: false });
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface Project { key: string; name: string; category: string | null; }
-type Page = "jira" | "gantt" | "kpi" | "velocity" | "epicmd";
+type Page = "jira" | "gantt" | "kpi" | "velocity" | "epicmd" | "datagap";
 
 // ─── Status / Priority ──────────────────────────────────────────────────────
 const STATUS_CFG: Record<string, { color: string; bg: string; border: string; dot: string }> = {
@@ -265,6 +266,7 @@ export default function Dashboard() {
     { id: "kpi",      label: "KPI Report",       icon: "📊", desc: "Dept. performance" },
     { id: "velocity", label: "Velocity Report",  icon: "🚀", desc: "Team velocity & allocation" },
     { id: "epicmd",   label: "Epic MD Report",   icon: "📋", desc: "Man-days per epic" },
+    { id: "datagap",  label: "Data Gap Summary",  icon: "🗺️", desc: "Coverage by country & operator" },
   ];
 
   return (
@@ -287,7 +289,7 @@ export default function Dashboard() {
             <div style={{ flex: 1 }} />
 
             {/* Project switcher */}
-            {(page === "jira" || page === "gantt" || page === "epicmd") && projects.length > 0 && (
+            {(page === "jira" || page === "gantt" || page === "epicmd" || page === "datagap") && projects.length > 0 && (
               <ProjectSwitcher projects={projects} current={activeProject} onChange={handleProjectChange} />
             )}
 
@@ -356,6 +358,9 @@ export default function Dashboard() {
 
         {/* ══ EPIC MD REPORT ══ */}
         {page === "epicmd" && <EpicMDReport projectKey={activeProject} allProjects={projects} />}
+
+        {/* ══ DATA GAP SUMMARY ══ */}
+        {page === "datagap" && <DataGapSummary projectKey={activeProject} allProjects={projects} />}
 
         {/* ══ JIRA DASHBOARD ══ */}
         {page === "jira" && (
