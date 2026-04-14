@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import type { JiraEpic } from "@/lib/jira";
+import type { JiraEpic, JiraTask } from "@/lib/jira";
 
 interface Project { key: string; name: string; category: string | null; }
-interface GanttProject { key: string; name: string; epics: JiraEpic[]; }
+interface GanttProject { key: string; name: string; epics: JiraEpic[]; tasks: JiraTask[]; }
 interface GanttData { projects: GanttProject[]; fetchedAt: string; }
 
 interface GanttChartProps {
@@ -25,6 +25,15 @@ const STATUS_COLOR: Record<string, string> = {
   "Delay":         "#ef4444",
   "On Hold":       "#f97316",
   "Waiting telco": "#f59e0b",
+};
+
+const TASK_STATUS_COLOR: Record<string, string> = {
+  "Done":        "#10b981",
+  "In Progress": "#6366f1",
+  "To Do":       "#64748b",
+  "In Review":   "#8b5cf6",
+  "Blocked":     "#ef4444",
+  "On Hold":     "#f97316",
 };
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -101,6 +110,7 @@ export default function GanttChart({ defaultProject, allProjects }: GanttChartPr
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [expandedEpics, setExpandedEpics] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState("All");
 
   const fetchGantt = async (keys: string[]) => {
@@ -137,6 +147,9 @@ export default function GanttChart({ defaultProject, allProjects }: GanttChartPr
   };
   const toggleCollapse = (key: string) => {
     setCollapsed((prev) => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
+  };
+  const toggleEpic = (key: string) => {
+    setExpandedEpics((prev) => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
   };
 
   const todayP = todayPct();
@@ -295,8 +308,8 @@ export default function GanttChart({ defaultProject, allProjects }: GanttChartPr
                       {todayP >= 0 && <div style={{ position: "absolute", top: 0, bottom: 0, left: `${todayP}%`, width: 2, background: "#f59e0b80", zIndex: 5 }} />}
                       {/* Span bar from first to last epic */}
                       {proj.epics.length > 0 && (() => {
-                        const starts = proj.epics.map((e) => e.created ? new Date(e.created).getTime() : YEAR_START);
-                        const ends   = proj.epics.map((e) => e.duedate  ? new Date(e.duedate).getTime()  : YEAR_END);
+                        const starts = proj.epics.map((e) => e.startDate ? new Date(e.startDate).getTime() : YEAR_START);
+                        const ends   = proj.epics.map((e) => e.duedate   ? new Date(e.duedate).getTime()   : YEAR_END);
                         const s = toPct(new Date(Math.min(...starts)), new Date(`${YEAR}-01-01`));
                         const e = toPct(new Date(Math.max(...ends)),   new Date(`${YEAR}-12-31`));
                         return (
@@ -308,50 +321,142 @@ export default function GanttChart({ defaultProject, allProjects }: GanttChartPr
 
                   {/* Epic rows */}
                   {!isCollapsed && sorted.map((epic, idx) => {
-                    const start  = epic.created ? new Date(epic.created) : new Date(`${YEAR}-01-01`);
-                    const end    = epic.duedate  ? new Date(epic.duedate)  : new Date(`${YEAR}-12-31`);
+                    const start  = epic.startDate ? new Date(epic.startDate) : new Date(`${YEAR}-01-01`);
+                    const end    = epic.duedate   ? new Date(epic.duedate)   : new Date(`${YEAR}-12-31`);
                     const sp     = toPct(start, new Date(`${YEAR}-01-01`));
                     const ep     = toPct(end,   new Date(`${YEAR}-12-31`));
                     const width  = Math.max(ep - sp, 0.4);
                     const color  = STATUS_COLOR[epic.status] || "#64748b";
                     const overdue = epic.duedate && new Date(epic.duedate) < new Date() && epic.status !== "Done";
+                    const epicTasks = proj.tasks.filter((t) => t.parentKey === epic.key);
+                    const isEpicExpanded = expandedEpics.has(epic.key);
 
                     return (
-                      <div key={epic.key} style={{ display: "flex", alignItems: "center", borderBottom: "1px solid var(--border)", minHeight: 38, background: idx % 2 === 0 ? "transparent" : `${trackColor}05` }}>
-                        {/* Label */}
-                        <div style={{ width: 240, flexShrink: 0, padding: "6px 12px 6px 20px", borderRight: "1px solid var(--border)", overflow: "hidden" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 2 }}>
-                            <span style={{ width: 7, height: 7, borderRadius: 2, background: color, flexShrink: 0 }} />
-                            <span style={{ fontSize: 10, fontFamily: "monospace", color: "var(--text-muted)" }}>{epic.key}</span>
-                            {overdue && <span style={{ fontSize: 9, color: "var(--red)", fontWeight: 800 }}>OVR</span>}
-                          </div>
-                          <div style={{ fontSize: 11, color: "var(--text)", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
-                            {epic.summary}
-                          </div>
-                          {epic.duedate && (
-                            <div style={{ fontSize: 10, color: overdue ? "var(--red)" : "var(--text-muted)", marginTop: 2 }}>
-                              Due: {fmtDate(epic.duedate)}
+                      <div key={epic.key}>
+                        <div style={{ display: "flex", alignItems: "center", borderBottom: "1px solid var(--border)", minHeight: 44, background: idx % 2 === 0 ? "transparent" : `${trackColor}05` }}>
+                          {/* Label */}
+                          <div style={{ width: 240, flexShrink: 0, padding: "6px 12px 6px 16px", borderRight: "1px solid var(--border)", overflow: "hidden" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 2 }}>
+                              {/* Expand toggle */}
+                              <button
+                                onClick={() => toggleEpic(epic.key)}
+                                title={isEpicExpanded ? "Collapse tasks" : `Show ${epicTasks.length} task(s)`}
+                                style={{ background: "none", border: "none", padding: 0, cursor: epicTasks.length > 0 ? "pointer" : "default", color: epicTasks.length > 0 ? trackColor : "var(--border)", fontSize: 10, lineHeight: 1, flexShrink: 0, width: 12 }}
+                              >
+                                {epicTasks.length > 0 ? (isEpicExpanded ? "▾" : "▸") : "·"}
+                              </button>
+                              <span style={{ width: 7, height: 7, borderRadius: 2, background: color, flexShrink: 0 }} />
+                              <span style={{ fontSize: 10, fontFamily: "monospace", color: "var(--text-muted)" }}>{epic.key}</span>
+                              {overdue && <span style={{ fontSize: 9, color: "var(--red)", fontWeight: 800 }}>OVR</span>}
+                              {epicTasks.length > 0 && (
+                                <span style={{ fontSize: 9, color: "var(--text-muted)", marginLeft: "auto" }}>{epicTasks.length}t</span>
+                              )}
                             </div>
-                          )}
+                            <div style={{ fontSize: 11, color: "var(--text)", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", paddingLeft: 17 }}>
+                              {epic.summary}
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3, paddingLeft: 17, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: 9, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+                                <span style={{ opacity: 0.6 }}>Start </span>
+                                <span style={{ fontWeight: 600, color: epic.startDate ? "var(--text)" : "var(--text-muted)" }}>
+                                  {fmtDate(epic.startDate)}
+                                </span>
+                              </span>
+                              <span style={{ fontSize: 9, color: "var(--border)", flexShrink: 0 }}>→</span>
+                              <span style={{ fontSize: 9, whiteSpace: "nowrap" }}>
+                                <span style={{ opacity: 0.6, color: "var(--text-muted)" }}>Due </span>
+                                <span style={{ fontWeight: 600, color: overdue ? "var(--red)" : epic.duedate ? "var(--text)" : "var(--text-muted)" }}>
+                                  {fmtDate(epic.duedate)}
+                                </span>
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Timeline bar */}
+                          <div style={{ flex: 1, position: "relative", height: 44 }}>
+                            {MONTHS.map((_, mi) => (
+                              <div key={mi} style={{ position: "absolute", top: 0, bottom: 0, left: `${(mi / 12) * 100}%`, borderLeft: mi > 0 ? "1px dashed var(--border)" : "none", pointerEvents: "none" }} />
+                            ))}
+                            {todayP >= 0 && (
+                              <div style={{ position: "absolute", top: 0, bottom: 0, left: `${todayP}%`, width: 2, background: "#f59e0b", zIndex: 10 }} />
+                            )}
+                            <div
+                              title={`${epic.summary}\n${epic.key}\nStatus: ${epic.status}\nStart: ${fmtDate(epic.startDate)}\nDue: ${fmtDate(epic.duedate)}\nAssignee: ${epic.assignee || "Unassigned"}`}
+                              style={{ position: "absolute", left: `${sp}%`, width: `${width}%`, top: "50%", transform: "translateY(-50%)", height: 26, borderRadius: 6, background: `${color}bb`, border: `1.5px solid ${color}`, display: "flex", flexDirection: "column", justifyContent: "center", paddingLeft: 7, paddingRight: 7, overflow: "hidden", cursor: "default", gap: 1 }}
+                            >
+                              <div style={{ display: "flex", alignItems: "center", gap: 4, overflow: "hidden" }}>
+                                <span style={{ fontSize: 9, color: "#fff", fontWeight: 800, whiteSpace: "nowrap", flexShrink: 0 }}>{epic.key}</span>
+                                <span style={{ fontSize: 9, color: "#ffffffcc", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{epic.summary}</span>
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                                <span style={{ fontSize: 8, color: "#ffffffcc", whiteSpace: "nowrap" }}>{fmtDate(epic.startDate)} → {fmtDate(epic.duedate)}</span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
 
-                        {/* Timeline bar */}
-                        <div style={{ flex: 1, position: "relative", height: 38 }}>
-                          {MONTHS.map((_, mi) => (
-                            <div key={mi} style={{ position: "absolute", top: 0, bottom: 0, left: `${(mi / 12) * 100}%`, borderLeft: mi > 0 ? "1px dashed var(--border)" : "none", pointerEvents: "none" }} />
-                          ))}
-                          {todayP >= 0 && (
-                            <div style={{ position: "absolute", top: 0, bottom: 0, left: `${todayP}%`, width: 2, background: "#f59e0b", zIndex: 10 }} />
-                          )}
-                          <div
-                            title={`${epic.summary}\n${epic.key}\nStatus: ${epic.status}\nStart: ${fmtDate(epic.created)}\nDue: ${fmtDate(epic.duedate)}\nAssignee: ${epic.assignee || "Unassigned"}`}
-                            style={{ position: "absolute", left: `${sp}%`, width: `${width}%`, top: "50%", transform: "translateY(-50%)", height: 18, borderRadius: 9, background: `${color}bb`, border: `1.5px solid ${color}`, display: "flex", alignItems: "center", paddingLeft: 6, overflow: "hidden", cursor: "default" }}
-                          >
-                            <span style={{ fontSize: 9, color: "#fff", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                              {epic.key}
-                            </span>
-                          </div>
-                        </div>
+                        {/* Task sub-rows (dropdown) */}
+                        {isEpicExpanded && epicTasks.map((task) => {
+                          const taskColor = TASK_STATUS_COLOR[task.status] || "#64748b";
+                          const taskStart = task.startDate ? new Date(task.startDate) : new Date(`${YEAR}-01-01`);
+                          const taskEnd   = task.duedate  ? new Date(task.duedate)  : new Date(`${YEAR}-12-31`);
+                          const tsp = toPct(taskStart, new Date(`${YEAR}-01-01`));
+                          const tep = toPct(taskEnd,   new Date(`${YEAR}-12-31`));
+                          const tw  = Math.max(tep - tsp, 0.4);
+                          return (
+                            <div key={task.key} style={{ display: "flex", alignItems: "center", borderBottom: "1px solid var(--border)", minHeight: 46, background: `${trackColor}08`, borderLeft: `2px solid ${trackColor}30` }}>
+                              <div style={{ width: 240, flexShrink: 0, padding: "4px 10px 4px 28px", borderRight: "1px solid var(--border)", overflow: "hidden" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                  <span style={{ fontSize: 9, fontFamily: "monospace", color: "var(--text-muted)", flexShrink: 0 }}>{task.key}</span>
+                                  <span style={{ fontSize: 9, fontWeight: 700, borderRadius: 3, padding: "1px 4px", background: `${taskColor}20`, color: taskColor, flexShrink: 0, whiteSpace: "nowrap" }}>
+                                    {task.status}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: 10, color: "var(--text)", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 1 }}>
+                                  {task.summary}
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2, flexWrap: "wrap" }}>
+                                  <span style={{ fontSize: 9, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+                                    <span style={{ opacity: 0.6 }}>Start </span>
+                                    <span style={{ fontWeight: 600, color: task.startDate ? "var(--text)" : "var(--text-muted)" }}>{fmtDate(task.startDate)}</span>
+                                  </span>
+                                  <span style={{ fontSize: 9, color: "var(--border)" }}>→</span>
+                                  <span style={{ fontSize: 9, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+                                    <span style={{ opacity: 0.6 }}>Due </span>
+                                    <span style={{ fontWeight: 600, color: task.duedate ? "var(--text)" : "var(--text-muted)" }}>{fmtDate(task.duedate)}</span>
+                                  </span>
+                                </div>
+                                {task.assignee && (
+                                  <div style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                    👤 {task.assignee}
+                                  </div>
+                                )}
+                              </div>
+                              <div style={{ flex: 1, position: "relative", height: 46 }}>
+                                {MONTHS.map((_, mi) => (
+                                  <div key={mi} style={{ position: "absolute", top: 0, bottom: 0, left: `${(mi / 12) * 100}%`, borderLeft: mi > 0 ? "1px dashed var(--border)" : "none", pointerEvents: "none" }} />
+                                ))}
+                                {todayP >= 0 && <div style={{ position: "absolute", top: 0, bottom: 0, left: `${todayP}%`, width: 1, background: "#f59e0b80", zIndex: 5 }} />}
+                                {task.duedate && (
+                                  <div
+                                    title={`${task.summary}\n${task.key}\nStatus: ${task.status}\nDue: ${fmtDate(task.duedate)}\nAssignee: ${task.assignee || "Unassigned"}`}
+                                    style={{ position: "absolute", left: `${tsp}%`, width: `${tw}%`, top: "50%", transform: "translateY(-50%)", height: 22, borderRadius: 5, background: `${taskColor}99`, border: `1px solid ${taskColor}`, cursor: "default", display: "flex", flexDirection: "column", justifyContent: "center", paddingLeft: 5, paddingRight: 5, overflow: "hidden", gap: 1 }}
+                                  >
+                                    <div style={{ display: "flex", alignItems: "center", gap: 3, overflow: "hidden" }}>
+                                      <span style={{ fontSize: 8, color: "#fff", fontWeight: 800, whiteSpace: "nowrap", flexShrink: 0 }}>{task.key}</span>
+                                      <span style={{ fontSize: 8, color: "#ffffffcc", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.summary}</span>
+                                    </div>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                                      <span style={{ fontSize: 7, color: "#ffffffaa", whiteSpace: "nowrap", flexShrink: 0 }}>{fmtDate(task.startDate)}</span>
+                                      <span style={{ fontSize: 7, color: "#ffffff60", flexShrink: 0 }}>→</span>
+                                      <span style={{ fontSize: 7, color: "#ffffffaa", whiteSpace: "nowrap", flexShrink: 0 }}>{fmtDate(task.duedate)}</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   })}
@@ -377,6 +482,7 @@ export default function GanttChart({ defaultProject, allProjects }: GanttChartPr
           </span>
           <span>· Bars span from created date → due date</span>
           <span>· Click project header to collapse/expand</span>
+          <span>· Click ▸ on an epic to expand its tasks</span>
         </div>
       )}
     </div>

@@ -3,6 +3,7 @@ export interface JiraEpic {
   summary: string;
   status: string;
   priority: string;
+  startDate: string | null;
   duedate: string | null;
   assignee: string | null;
   created: string;
@@ -16,6 +17,7 @@ export interface JiraTask {
   status: string;
   issuetype: string;
   priority: string;
+  startDate: string | null;
   duedate: string | null;
   assignee: string | null;
   parent: string | null;
@@ -108,8 +110,30 @@ export async function fetchProjects(): Promise<Array<{ key: string; name: string
   }));
 }
 
+export async function fetchProjectTasks(projectKey: string): Promise<JiraTask[]> {
+  const fields = ["summary", "status", "issuetype", "priority", "customfield_10015", "duedate", "assignee", "parent", "created", "updated"];
+  const issues = await searchJira(
+    `project = "${projectKey}" AND issuetype != Epic AND created >= "2026-01-01" ORDER BY updated DESC`,
+    fields, 200
+  );
+  return issues.map((issue: any) => ({
+    key: issue.key,
+    summary: issue.fields.summary || "",
+    status: issue.fields.status?.name || "Unknown",
+    issuetype: issue.fields.issuetype?.name || "Task",
+    priority: issue.fields.priority?.name || "Medium",
+    startDate: issue.fields.customfield_10015 || null,
+    duedate: issue.fields.duedate || null,
+    assignee: issue.fields.assignee?.displayName || null,
+    parent: issue.fields.parent?.fields?.summary || null,
+    parentKey: issue.fields.parent?.key || null,
+    created: issue.fields.created || "",
+    updated: issue.fields.updated || "",
+  }));
+}
+
 export async function fetchProjectEpics(projectKey: string): Promise<JiraEpic[]> {
-  const fields = ["summary", "status", "priority", "duedate", "assignee", "created", "updated"];
+  const fields = ["summary", "status", "priority", "customfield_10015", "duedate", "assignee", "created", "updated"];
   const issues = await searchJira(
     `project = "${projectKey}" AND issuetype = Epic AND created >= "2026-01-01" ORDER BY duedate ASC`,
     fields, 100
@@ -119,6 +143,7 @@ export async function fetchProjectEpics(projectKey: string): Promise<JiraEpic[]>
     summary: issue.fields.summary || "",
     status: issue.fields.status?.name || "Unknown",
     priority: issue.fields.priority?.name || "Medium",
+    startDate: issue.fields.customfield_10015 || null,
     duedate: issue.fields.duedate || null,
     assignee: issue.fields.assignee?.displayName || null,
     created: issue.fields.created || "",
@@ -128,8 +153,8 @@ export async function fetchProjectEpics(projectKey: string): Promise<JiraEpic[]>
 
 export async function fetchDashboardData(projectKey?: string): Promise<JiraDashboardData> {
   const key = projectKey || PROJECT_KEY;
-  const epicFields = ["summary", "status", "priority", "duedate", "assignee", "description", "created", "updated"];
-  const taskFields = ["summary", "status", "issuetype", "priority", "duedate", "assignee", "parent", "created", "updated"];
+  const epicFields = ["summary", "status", "priority", "customfield_10015", "duedate", "assignee", "description", "created", "updated"];
+  const taskFields = ["summary", "status", "issuetype", "priority", "customfield_10015", "duedate", "assignee", "parent", "created", "updated"];
 
   const [epicIssues, taskIssues] = await Promise.all([
     searchJira(
@@ -149,6 +174,7 @@ export async function fetchDashboardData(projectKey?: string): Promise<JiraDashb
     summary: issue.fields.summary || "",
     status: issue.fields.status?.name || "Unknown",
     priority: issue.fields.priority?.name || "Medium",
+    startDate: issue.fields.customfield_10015 || null,
     duedate: issue.fields.duedate || null,
     assignee: issue.fields.assignee?.displayName || null,
     created: issue.fields.created || "",
@@ -162,6 +188,7 @@ export async function fetchDashboardData(projectKey?: string): Promise<JiraDashb
     status: issue.fields.status?.name || "Unknown",
     issuetype: issue.fields.issuetype?.name || "Task",
     priority: issue.fields.priority?.name || "Medium",
+    startDate: issue.fields.customfield_10015 || null,
     duedate: issue.fields.duedate || null,
     assignee: issue.fields.assignee?.displayName || null,
     parent: issue.fields.parent?.fields?.summary || null,

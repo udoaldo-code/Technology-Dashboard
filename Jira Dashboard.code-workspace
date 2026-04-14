@@ -2,6 +2,12 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"path": "../Ads Performance"
+		},
+		{
+			"path": "../Ads Banner Generation"
 		}
 	],
 	"settings": {}
