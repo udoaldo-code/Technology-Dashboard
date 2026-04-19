@@ -34,7 +34,7 @@ function sc(status: string) {
 // ─── Utils ───────────────────────────────────────────────────────────────────
 function isDone(status: string) {
   const n = status.toLowerCase().replace(/\s*\/\s*/g, "/").trim();
-  return n === "done" || n === "stg/ready to deploy";
+  return n === "done" || n === "stg/ready to deploy" || n === "waiting telco" || n === "on hold";
 }
 function isOverdue(due: string | null, status: string) {
   return !!due && !isDone(status) && new Date(due) < new Date();

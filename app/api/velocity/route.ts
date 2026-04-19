@@ -15,7 +15,7 @@ function authHeaders() {
 // ── Done-status check — case-insensitive, normalises spaces around slash ───────
 function isDoneStatus(status: string): boolean {
   const n = status.toLowerCase().replace(/\s*\/\s*/g, "/").trim();
-  return n === "done" || n === "stg/ready to deploy";
+  return n === "done" || n === "stg/ready to deploy" || n === "waiting telco" || n === "on hold";
 }
 
 // ── Team classification ───────────────────────────────────────────────────────

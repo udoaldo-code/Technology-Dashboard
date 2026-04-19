@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "../Ads Banner Generation"
+		},
+		{
+			"path": "../Dashboard Ads"
 		}
 	],
 	"settings": {}
