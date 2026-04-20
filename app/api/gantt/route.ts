@@ -18,7 +18,7 @@ export async function GET(request: Request) {
       .split(",")
       .map((k) => k.trim())
       .filter(Boolean)
-      .slice(0, 6); // max 6 projects at a time
+      .slice(0, 30); // max 30 projects at a time
 
     // Fetch project names + epics + tasks in parallel
     const [projectList, epicResults, taskResults] = await Promise.all([

@@ -190,7 +190,7 @@ export default function GanttChart({ defaultProject, allProjects }: GanttChartPr
           })}
         </div>
 
-        {selectedKeys.length < 6 && (
+        {selectedKeys.length < 30 && (
           <AddProjectPicker allProjects={allProjects} selectedKeys={selectedKeys} onAdd={addProject} />
         )}
 

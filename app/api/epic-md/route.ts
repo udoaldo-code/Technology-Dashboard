@@ -240,8 +240,12 @@ export async function GET(request: Request) {
     if (sprintElapsedDays === 0) sprintElapsedDays = 1;
 
     // Map tasks by parent epic key
+    // Tasks excluded from MD calculation
+    const EXCLUDED_TASK_KEYS = new Set(["PPOBNEW-1677"]);
+
     const tasksByEpic: Record<string, EpicTask[]> = {};
     for (const i of taskIssues) {
+      if (EXCLUDED_TASK_KEYS.has(i.key)) continue;
       const epicKey = i.fields.parent?.key;
       if (!epicKey) continue;
       if (!tasksByEpic[epicKey]) tasksByEpic[epicKey] = [];
