@@ -157,12 +157,16 @@ export default function GanttChart({ defaultProject, allProjects }: GanttChartPr
 
   // All epics flat (for summary)
   const allEpics = projects.flatMap((p) => p.epics);
+  const INACTIVE_STATUSES = new Set(["Done", "Dropped"]);
   const filteredProjects = projects.map((p) => ({
     ...p,
-    epics: statusFilter === "All" ? p.epics : p.epics.filter((e) => e.status === statusFilter),
+    epics: statusFilter === "All"    ? p.epics
+         : statusFilter === "Active" ? p.epics.filter((e) => !INACTIVE_STATUSES.has(e.status))
+         :                             p.epics.filter((e) => e.status === statusFilter),
   }));
 
-  const allStatuses = ["All", ...Array.from(new Set(allEpics.map((e) => e.status))).sort()];
+  const activeCount = allEpics.filter((e) => !INACTIVE_STATUSES.has(e.status)).length;
+  const allStatuses = ["All", "Active", ...Array.from(new Set(allEpics.map((e) => e.status))).sort()];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -216,16 +220,22 @@ export default function GanttChart({ defaultProject, allProjects }: GanttChartPr
       {/* Status filter pills */}
       {!loading && allStatuses.length > 1 && (
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {allStatuses.map((s) => (
-            <button key={s} onClick={() => setStatusFilter(s)} style={{
-              padding: "5px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
-              background: statusFilter === s ? (STATUS_COLOR[s] || "var(--accent)") : "var(--surface)",
-              color: statusFilter === s ? "#fff" : "var(--text-muted)",
-              border: statusFilter === s ? "none" : "1px solid var(--border)",
-            }}>
-              {s}{s !== "All" && <span style={{ marginLeft: 5, opacity: 0.75 }}>{allEpics.filter((e) => e.status === s).length}</span>}
-            </button>
-          ))}
+          {allStatuses.map((s) => {
+            const isActive = statusFilter === s;
+            const activeBg = s === "Active" ? "#0891b2" : (STATUS_COLOR[s] || "var(--accent)");
+            const count = s === "All" ? null : s === "Active" ? activeCount : allEpics.filter((e) => e.status === s).length;
+            return (
+              <button key={s} onClick={() => setStatusFilter(s)} style={{
+                padding: "5px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
+                background: isActive ? activeBg : "var(--surface)",
+                color: isActive ? "#fff" : "var(--text-muted)",
+                border: isActive ? "none" : "1px solid var(--border)",
+              }}>
+                {s === "Active" ? "⚡ Active" : s}
+                {count !== null && <span style={{ marginLeft: 5, opacity: 0.75 }}>{count}</span>}
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -328,7 +338,7 @@ export default function GanttChart({ defaultProject, allProjects }: GanttChartPr
                     const width  = Math.max(ep - sp, 0.4);
                     const color  = STATUS_COLOR[epic.status] || "#64748b";
                     const overdue = epic.duedate && new Date(epic.duedate) < new Date() && epic.status !== "Done";
-                    const epicTasks = proj.tasks.filter((t) => t.parentKey === epic.key);
+                    const epicTasks = proj.tasks.filter((t) => t.parentKey === epic.key && t.status !== "Done" && t.status !== "Dropped");
                     const isEpicExpanded = expandedEpics.has(epic.key);
 
                     return (
