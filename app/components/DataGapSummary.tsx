@@ -90,7 +90,7 @@ function isDone(s: string) {
 function sc(status: string): { color: string; bg: string; border: string; dot: string } {
   const MAP: Record<string, { color: string; bg: string; border: string; dot: string }> = {
     "Done":          { color: "#059669", bg: "#d1fae5", border: "#6ee7b7", dot: "#059669" },
-    "In Progress":   { color: "#4f46e5", bg: "#ede9fe", border: "#a5b4fc", dot: "#4f46e5" },
+    "In Progress":   { color: "#0693e3", bg: "#e0f7ff", border: "#7dd3fc", dot: "#00adef" },
     "To Do":         { color: "#475569", bg: "#f1f5f9", border: "#cbd5e1", dot: "#94a3b8" },
     "Delay":         { color: "#dc2626", bg: "#fee2e2", border: "#fca5a5", dot: "#dc2626" },
     "On Hold":       { color: "#ea580c", bg: "#ffedd5", border: "#fdba74", dot: "#ea580c" },
@@ -207,7 +207,7 @@ function EpicRow({ epic }: { epic: GapEpic }) {
         <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{epic.summary}</div>
       </td>
       <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
-        <span style={{ background: "#ede9fe", color: "#4f46e5", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontWeight: 600 }}>{epic.country}</span>
+        <span style={{ background: "#e0f7ff", color: "#0693e3", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontWeight: 600 }}>{epic.country}</span>
       </td>
       <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
         <span style={{ background: "#dbeafe", color: "#1d4ed8", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontWeight: 600 }}>{epic.operator}</span>
@@ -508,7 +508,7 @@ export default function DataGapSummary({ projectKey }: Props) {
                 { label: "Unassigned",       count: missingAssignee.length, total: totalEpics, color: "#dc2626" },
                 { label: "Delayed",          count: delayedEpics.length,   total: totalEpics, color: "#dc2626" },
                 { label: "Blocked / On Hold",count: blockedEpics.length,   total: totalEpics, color: "#b45309" },
-                { label: "In Progress",      count: inProgEpics.length,    total: totalEpics, color: "#4f46e5" },
+                { label: "In Progress",      count: inProgEpics.length,    total: totalEpics, color: "#00adef" },
                 { label: "Completed",        count: doneEpics.length,      total: totalEpics, color: "#059669" },
               ].filter((r) => r.count > 0).map((row) => {
                 const pct = totalEpics > 0 ? Math.round((row.count / totalEpics) * 100) : 0;
@@ -668,10 +668,10 @@ export default function DataGapSummary({ projectKey }: Props) {
                         <button
                           key={ctr}
                           onClick={() => { setDrillCountry(ctr); setDrillOperator(operator); setView("detail"); }}
-                          style={{ display: "flex", alignItems: "center", gap: 5, background: "#ede9fe", color: "#4f46e5", border: "1px solid #c4b5fd", borderRadius: 20, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+                          style={{ display: "flex", alignItems: "center", gap: 5, background: "#e0f7ff", color: "#0693e3", border: "1px solid #7dd3fc", borderRadius: 20, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
                         >
                           🌍 {ctr}
-                          <span style={{ background: "#4f46e5", color: "#fff", borderRadius: 10, padding: "0px 5px", fontSize: 10 }}>{ctrEpics.length}</span>
+                          <span style={{ background: "#00adef", color: "#fff", borderRadius: 10, padding: "0px 5px", fontSize: 10 }}>{ctrEpics.length}</span>
                         </button>
                       );
                     })}

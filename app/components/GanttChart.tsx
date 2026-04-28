@@ -340,10 +340,16 @@ export default function GanttChart({ defaultProject, allProjects }: GanttChartPr
                     const overdue = epic.duedate && new Date(epic.duedate) < new Date() && epic.status !== "Done";
                     const epicTasks = proj.tasks.filter((t) => t.parentKey === epic.key && t.status !== "Done" && t.status !== "Dropped");
                     const isEpicExpanded = expandedEpics.has(epic.key);
+                    const hasNewDates = !!(epic.newStartDate || epic.newDueDate);
+                    const newStart = epic.newStartDate ? new Date(epic.newStartDate) : start;
+                    const newEnd   = epic.newDueDate   ? new Date(epic.newDueDate)   : end;
+                    const nsp = toPct(newStart, new Date(`${YEAR}-01-01`));
+                    const nep = toPct(newEnd,   new Date(`${YEAR}-12-31`));
+                    const nWidth = Math.max(nep - nsp, 0.4);
 
                     return (
                       <div key={epic.key}>
-                        <div style={{ display: "flex", alignItems: "center", borderBottom: "1px solid var(--border)", minHeight: 44, background: idx % 2 === 0 ? "transparent" : `${trackColor}05` }}>
+                        <div style={{ display: "flex", alignItems: "center", borderBottom: "1px solid var(--border)", minHeight: hasNewDates ? 60 : 44, background: idx % 2 === 0 ? "transparent" : `${trackColor}05` }}>
                           {/* Label */}
                           <div style={{ width: 240, flexShrink: 0, padding: "6px 12px 6px 16px", borderRight: "1px solid var(--border)", overflow: "hidden" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 2 }}>
@@ -358,6 +364,7 @@ export default function GanttChart({ defaultProject, allProjects }: GanttChartPr
                               <span style={{ width: 7, height: 7, borderRadius: 2, background: color, flexShrink: 0 }} />
                               <span style={{ fontSize: 10, fontFamily: "monospace", color: "var(--text-muted)" }}>{epic.key}</span>
                               {overdue && <span style={{ fontSize: 9, color: "var(--red)", fontWeight: 800 }}>OVR</span>}
+                              {hasNewDates && <span style={{ fontSize: 9, color: "#f97316", fontWeight: 800 }}>NEW</span>}
                               {epicTasks.length > 0 && (
                                 <span style={{ fontSize: 9, color: "var(--text-muted)", marginLeft: "auto" }}>{epicTasks.length}t</span>
                               )}
@@ -380,19 +387,26 @@ export default function GanttChart({ defaultProject, allProjects }: GanttChartPr
                                 </span>
                               </span>
                             </div>
+                            {hasNewDates && (
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2, paddingLeft: 17, flexWrap: "wrap" }}>
+                                <span style={{ fontSize: 9, color: "#f97316", fontWeight: 700, whiteSpace: "nowrap" }}>↳ New:</span>
+                                <span style={{ fontSize: 9, color: "#f97316", fontWeight: 600, whiteSpace: "nowrap" }}>{fmtDate(epic.newStartDate)} → {fmtDate(epic.newDueDate)}</span>
+                              </div>
+                            )}
                           </div>
 
                           {/* Timeline bar */}
-                          <div style={{ flex: 1, position: "relative", height: 44 }}>
+                          <div style={{ flex: 1, position: "relative", height: hasNewDates ? 60 : 44 }}>
                             {MONTHS.map((_, mi) => (
                               <div key={mi} style={{ position: "absolute", top: 0, bottom: 0, left: `${(mi / 12) * 100}%`, borderLeft: mi > 0 ? "1px dashed var(--border)" : "none", pointerEvents: "none" }} />
                             ))}
                             {todayP >= 0 && (
                               <div style={{ position: "absolute", top: 0, bottom: 0, left: `${todayP}%`, width: 2, background: "#f59e0b", zIndex: 10 }} />
                             )}
+                            {/* Original date bar */}
                             <div
-                              title={`${epic.summary}\n${epic.key}\nStatus: ${epic.status}\nStart: ${fmtDate(epic.startDate)}\nDue: ${fmtDate(epic.duedate)}\nAssignee: ${epic.assignee || "Unassigned"}`}
-                              style={{ position: "absolute", left: `${sp}%`, width: `${width}%`, top: "50%", transform: "translateY(-50%)", height: 26, borderRadius: 6, background: `${color}bb`, border: `1.5px solid ${color}`, display: "flex", flexDirection: "column", justifyContent: "center", paddingLeft: 7, paddingRight: 7, overflow: "hidden", cursor: "default", gap: 1 }}
+                              title={`${epic.summary}\n${epic.key}\nStatus: ${epic.status}\nStart: ${fmtDate(epic.startDate)}\nDue: ${fmtDate(epic.duedate)}${hasNewDates ? `\nNew Start: ${fmtDate(epic.newStartDate)}\nNew Due: ${fmtDate(epic.newDueDate)}` : ""}\nAssignee: ${epic.assignee || "Unassigned"}`}
+                              style={{ position: "absolute", left: `${sp}%`, width: `${width}%`, top: hasNewDates ? "30%" : "50%", transform: "translateY(-50%)", height: 26, borderRadius: 6, background: `${color}bb`, border: `1.5px solid ${color}`, display: "flex", flexDirection: "column", justifyContent: "center", paddingLeft: 7, paddingRight: 7, overflow: "hidden", cursor: "default", gap: 1 }}
                             >
                               <div style={{ display: "flex", alignItems: "center", gap: 4, overflow: "hidden" }}>
                                 <span style={{ fontSize: 9, color: "#fff", fontWeight: 800, whiteSpace: "nowrap", flexShrink: 0 }}>{epic.key}</span>
@@ -402,6 +416,15 @@ export default function GanttChart({ defaultProject, allProjects }: GanttChartPr
                                 <span style={{ fontSize: 8, color: "#ffffffcc", whiteSpace: "nowrap" }}>{fmtDate(epic.startDate)} → {fmtDate(epic.duedate)}</span>
                               </div>
                             </div>
+                            {/* New date bar */}
+                            {hasNewDates && (
+                              <div
+                                title={`New dates\nNew Start: ${fmtDate(epic.newStartDate)}\nNew Due: ${fmtDate(epic.newDueDate)}`}
+                                style={{ position: "absolute", left: `${nsp}%`, width: `${nWidth}%`, top: "72%", transform: "translateY(-50%)", height: 14, borderRadius: 4, background: "#f9731630", border: "1.5px dashed #f97316", display: "flex", alignItems: "center", paddingLeft: 5, paddingRight: 5, overflow: "hidden", cursor: "default" }}
+                              >
+                                <span style={{ fontSize: 7, color: "#f97316", fontWeight: 700, whiteSpace: "nowrap" }}>{fmtDate(epic.newStartDate)} → {fmtDate(epic.newDueDate)}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -413,14 +436,21 @@ export default function GanttChart({ defaultProject, allProjects }: GanttChartPr
                           const tsp = toPct(taskStart, new Date(`${YEAR}-01-01`));
                           const tep = toPct(taskEnd,   new Date(`${YEAR}-12-31`));
                           const tw  = Math.max(tep - tsp, 0.4);
+                          const taskHasNew = !!(task.newStartDate || task.newDueDate);
+                          const tnStart = task.newStartDate ? new Date(task.newStartDate) : taskStart;
+                          const tnEnd   = task.newDueDate   ? new Date(task.newDueDate)   : taskEnd;
+                          const tnsp = toPct(tnStart, new Date(`${YEAR}-01-01`));
+                          const tnep = toPct(tnEnd,   new Date(`${YEAR}-12-31`));
+                          const tnw  = Math.max(tnep - tnsp, 0.4);
                           return (
-                            <div key={task.key} style={{ display: "flex", alignItems: "center", borderBottom: "1px solid var(--border)", minHeight: 46, background: `${trackColor}08`, borderLeft: `2px solid ${trackColor}30` }}>
+                            <div key={task.key} style={{ display: "flex", alignItems: "center", borderBottom: "1px solid var(--border)", minHeight: taskHasNew ? 60 : 46, background: `${trackColor}08`, borderLeft: `2px solid ${trackColor}30` }}>
                               <div style={{ width: 240, flexShrink: 0, padding: "4px 10px 4px 28px", borderRight: "1px solid var(--border)", overflow: "hidden" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                                   <span style={{ fontSize: 9, fontFamily: "monospace", color: "var(--text-muted)", flexShrink: 0 }}>{task.key}</span>
                                   <span style={{ fontSize: 9, fontWeight: 700, borderRadius: 3, padding: "1px 4px", background: `${taskColor}20`, color: taskColor, flexShrink: 0, whiteSpace: "nowrap" }}>
                                     {task.status}
                                   </span>
+                                  {taskHasNew && <span style={{ fontSize: 9, color: "#f97316", fontWeight: 800 }}>NEW</span>}
                                 </div>
                                 <div style={{ fontSize: 10, color: "var(--text)", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 1 }}>
                                   {task.summary}
@@ -436,21 +466,27 @@ export default function GanttChart({ defaultProject, allProjects }: GanttChartPr
                                     <span style={{ fontWeight: 600, color: task.duedate ? "var(--text)" : "var(--text-muted)" }}>{fmtDate(task.duedate)}</span>
                                   </span>
                                 </div>
+                                {taskHasNew && (
+                                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2, flexWrap: "wrap" }}>
+                                    <span style={{ fontSize: 9, color: "#f97316", fontWeight: 700, whiteSpace: "nowrap" }}>↳ New:</span>
+                                    <span style={{ fontSize: 9, color: "#f97316", fontWeight: 600, whiteSpace: "nowrap" }}>{fmtDate(task.newStartDate)} → {fmtDate(task.newDueDate)}</span>
+                                  </div>
+                                )}
                                 {task.assignee && (
                                   <div style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                     👤 {task.assignee}
                                   </div>
                                 )}
                               </div>
-                              <div style={{ flex: 1, position: "relative", height: 46 }}>
+                              <div style={{ flex: 1, position: "relative", height: taskHasNew ? 60 : 46 }}>
                                 {MONTHS.map((_, mi) => (
                                   <div key={mi} style={{ position: "absolute", top: 0, bottom: 0, left: `${(mi / 12) * 100}%`, borderLeft: mi > 0 ? "1px dashed var(--border)" : "none", pointerEvents: "none" }} />
                                 ))}
                                 {todayP >= 0 && <div style={{ position: "absolute", top: 0, bottom: 0, left: `${todayP}%`, width: 1, background: "#f59e0b80", zIndex: 5 }} />}
                                 {task.duedate && (
                                   <div
-                                    title={`${task.summary}\n${task.key}\nStatus: ${task.status}\nDue: ${fmtDate(task.duedate)}\nAssignee: ${task.assignee || "Unassigned"}`}
-                                    style={{ position: "absolute", left: `${tsp}%`, width: `${tw}%`, top: "50%", transform: "translateY(-50%)", height: 22, borderRadius: 5, background: `${taskColor}99`, border: `1px solid ${taskColor}`, cursor: "default", display: "flex", flexDirection: "column", justifyContent: "center", paddingLeft: 5, paddingRight: 5, overflow: "hidden", gap: 1 }}
+                                    title={`${task.summary}\n${task.key}\nStatus: ${task.status}\nStart: ${fmtDate(task.startDate)}\nDue: ${fmtDate(task.duedate)}${taskHasNew ? `\nNew Start: ${fmtDate(task.newStartDate)}\nNew Due: ${fmtDate(task.newDueDate)}` : ""}\nAssignee: ${task.assignee || "Unassigned"}`}
+                                    style={{ position: "absolute", left: `${tsp}%`, width: `${tw}%`, top: taskHasNew ? "32%" : "50%", transform: "translateY(-50%)", height: 22, borderRadius: 5, background: `${taskColor}99`, border: `1px solid ${taskColor}`, cursor: "default", display: "flex", flexDirection: "column", justifyContent: "center", paddingLeft: 5, paddingRight: 5, overflow: "hidden", gap: 1 }}
                                   >
                                     <div style={{ display: "flex", alignItems: "center", gap: 3, overflow: "hidden" }}>
                                       <span style={{ fontSize: 8, color: "#fff", fontWeight: 800, whiteSpace: "nowrap", flexShrink: 0 }}>{task.key}</span>
@@ -461,6 +497,15 @@ export default function GanttChart({ defaultProject, allProjects }: GanttChartPr
                                       <span style={{ fontSize: 7, color: "#ffffff60", flexShrink: 0 }}>→</span>
                                       <span style={{ fontSize: 7, color: "#ffffffaa", whiteSpace: "nowrap", flexShrink: 0 }}>{fmtDate(task.duedate)}</span>
                                     </div>
+                                  </div>
+                                )}
+                                {/* New date bar */}
+                                {taskHasNew && (
+                                  <div
+                                    title={`New dates\nNew Start: ${fmtDate(task.newStartDate)}\nNew Due: ${fmtDate(task.newDueDate)}`}
+                                    style={{ position: "absolute", left: `${tnsp}%`, width: `${tnw}%`, top: "72%", transform: "translateY(-50%)", height: 12, borderRadius: 3, background: "#f9731630", border: "1.5px dashed #f97316", display: "flex", alignItems: "center", paddingLeft: 4, overflow: "hidden", cursor: "default" }}
+                                  >
+                                    <span style={{ fontSize: 6, color: "#f97316", fontWeight: 700, whiteSpace: "nowrap" }}>{fmtDate(task.newStartDate)} → {fmtDate(task.newDueDate)}</span>
                                   </div>
                                 )}
                               </div>
@@ -490,7 +535,10 @@ export default function GanttChart({ defaultProject, allProjects }: GanttChartPr
             <span style={{ display: "inline-block", width: 18, height: 3, background: "#f59e0b", borderRadius: 2 }} />
             Today ({new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })})
           </span>
-          <span>· Bars span from created date → due date</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <span style={{ display: "inline-block", width: 18, height: 8, borderRadius: 2, background: "#f9731630", border: "1.5px dashed #f97316" }} />
+            New dates (revised)
+          </span>
           <span>· Click project header to collapse/expand</span>
           <span>· Click ▸ on an epic to expand its tasks</span>
         </div>

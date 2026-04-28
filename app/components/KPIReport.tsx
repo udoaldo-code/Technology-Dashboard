@@ -152,11 +152,11 @@ function WeeklyHighlightsView({ highlights }: { highlights: WeeklyHighlight[] })
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                 <span style={{ fontSize: 16 }}>🎯</span>
                 <span style={{ fontWeight: 700, fontSize: 13, color: "#6366f1" }}>Top Priorities</span>
-                <span style={{ background: "#ede9fe", color: "#4f46e5", borderRadius: 20, padding: "1px 8px", fontSize: 11, fontWeight: 600 }}>{current.priorities.length}</span>
+                <span style={{ background: "#e0f7ff", color: "#0693e3", borderRadius: 20, padding: "1px 8px", fontSize: 11, fontWeight: 600 }}>{current.priorities.length}</span>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {current.priorities.map((pri, i) => (
-                  <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "#f5f3ff", border: "1px solid #c4b5fd", borderRadius: "var(--radius-sm)", padding: "8px 12px" }}>
+                  <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "#e0f7ff", border: "1px solid #7dd3fc", borderRadius: "var(--radius-sm)", padding: "8px 12px" }}>
                     <span style={{ background: "#6366f1", color: "#fff", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, flexShrink: 0 }}>{i + 1}</span>
                     <span style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.5 }}>{pri}</span>
                   </div>

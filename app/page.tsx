@@ -17,7 +17,7 @@ type Page = "jira" | "gantt" | "kpi" | "velocity" | "epicmd" | "datagap";
 // ─── Status / Priority ──────────────────────────────────────────────────────
 const STATUS_CFG: Record<string, { color: string; bg: string; border: string; dot: string }> = {
   "Done":          { color: "#059669", bg: "#d1fae5", border: "#6ee7b7", dot: "#059669" },
-  "In Progress":   { color: "#4f46e5", bg: "#ede9fe", border: "#a5b4fc", dot: "#4f46e5" },
+  "In Progress":   { color: "#0693e3", bg: "#e0f7ff", border: "#7dd3fc", dot: "#00adef" },
   "To Do":         { color: "#475569", bg: "#f1f5f9", border: "#cbd5e1", dot: "#94a3b8" },
   "Delay":         { color: "#dc2626", bg: "#fee2e2", border: "#fca5a5", dot: "#dc2626" },
   "On Hold":       { color: "#ea580c", bg: "#ffedd5", border: "#fdba74", dot: "#ea580c" },
@@ -94,33 +94,16 @@ function generateRecs(epics: JiraEpic[], tasks: JiraTask[]) {
   return recs;
 }
 
-// ─── Logo SVG ────────────────────────────────────────────────────────────────
+// ─── Logo ────────────────────────────────────────────────────────────────────
 function Linkit360Logo() {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 0, flexShrink: 0 }}>
-      {/* Icon box */}
-      <div style={{
-        width: 36, height: 36, borderRadius: 9,
-        background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        flexShrink: 0,
-        boxShadow: "0 2px 8px #4f46e530",
-      }}>
-        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-          <path d="M5 11h3.5M13.5 11H17" stroke="white" strokeWidth="2" strokeLinecap="round" />
-          <rect x="7.5" y="7.5" width="7" height="7" rx="3.5" stroke="white" strokeWidth="1.8" fill="none" />
-          <circle cx="11" cy="11" r="2" fill="white" />
-        </svg>
-      </div>
-      {/* Text */}
-      <div style={{ marginLeft: 9, lineHeight: 1.1 }}>
-        <div style={{ fontSize: 15, fontWeight: 900, letterSpacing: "-0.5px", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-          <span style={{ color: "#1e3a8a" }}>LINKIT</span><span style={{ color: "#4f46e5" }}>360</span>
-        </div>
-        <div style={{ fontSize: 9.5, fontWeight: 600, color: "#4f46e5", letterSpacing: "0.12em", textTransform: "uppercase" }}>
-          Technology
-        </div>
-      </div>
+    <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+      <img
+        src="https://linkit360.com/wp-content/uploads/2021/04/logo_linkit_hi.png"
+        alt="Linkit360"
+        className="linkit-logo"
+        style={{ height: 28, width: "auto", objectFit: "contain", maxWidth: 140 }}
+      />
     </div>
   );
 }
@@ -272,7 +255,8 @@ export default function Dashboard() {
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
       {/* ── Navbar ── */}
-      <header style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 1px 8px rgba(0,0,0,0.08)" }}>
+      <header style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 1px 8px rgba(0,0,0,0.08)", borderTop: "3px solid transparent", backgroundClip: "padding-box", backgroundImage: "none" }}>
+        <div style={{ height: 3, background: "var(--accent-gradient, linear-gradient(135deg,#0693e3,#00adef))", position: "absolute", top: 0, left: 0, right: 0 }} />
         <div style={{ maxWidth: 1300, margin: "0 auto", padding: "0 16px" }}>
           {/* Top row */}
           <div className="header-top">
@@ -401,7 +385,7 @@ export default function Dashboard() {
                 <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{doneEpics.length} / {epics.length} epics</span>
               </div>
               <div style={{ height: 10, background: "var(--surface2)", borderRadius: 5, overflow: "hidden", border: "1px solid var(--border)" }}>
-                <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg,#6366f1,#10b981)", borderRadius: 5, transition: "width 0.6s ease" }} />
+                <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg,#00adef,#10b981)", borderRadius: 5, transition: "width 0.6s ease" }} />
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 14px", marginTop: 10 }}>
                 {Object.entries(STATUS_CFG).map(([status, s]) => {
@@ -444,7 +428,7 @@ export default function Dashboard() {
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {recs.map((r, i) => (
-                    <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "#ede9fe", border: "1px solid #c4b5fd", borderRadius: "var(--radius-sm)", padding: "10px 12px" }}>
+                    <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "#e0f7ff", border: "1px solid #7dd3fc", borderRadius: "var(--radius-sm)", padding: "10px 12px" }}>
                       <span style={{ background: "var(--accent)", color: "#fff", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{i + 1}</span>
                       <span style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.5 }}>{r}</span>
                     </div>
@@ -760,7 +744,7 @@ function SprintView({ projectKey }: { projectKey: string }) {
             <span>Task completion</span><span>{done}/{total}</span>
           </div>
           <div style={{ height: 8, background: "#f1f5f9", borderRadius: 4, overflow: "hidden", border: "1px solid var(--border)", marginBottom: 8 }}>
-            <div style={{ height: "100%", width: `${velocity}%`, background: "linear-gradient(90deg,#4f46e5,#10b981)", borderRadius: 4, transition: "width 0.5s" }} />
+            <div style={{ height: "100%", width: `${velocity}%`, background: "linear-gradient(90deg,#00adef,#10b981)", borderRadius: 4, transition: "width 0.5s" }} />
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>
             <span>Time elapsed</span>
@@ -805,7 +789,7 @@ function SprintView({ projectKey }: { projectKey: string }) {
                     {name === "Unassigned" ? <span style={{ color: "var(--red)" }}>Unassigned</span> : name.split(" ").slice(0, 2).join(" ")}
                   </div>
                   <div style={{ flex: 1, height: 14, background: "#f1f5f9", borderRadius: 7, overflow: "hidden", border: "1px solid var(--border)", position: "relative" }}>
-                    <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${pct}%`, background: pct >= 80 ? "#10b981" : pct >= 50 ? "#4f46e5" : "#f87171", borderRadius: 7 }} />
+                    <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${pct}%`, background: pct >= 80 ? "#10b981" : pct >= 50 ? "#00adef" : "#f87171", borderRadius: 7 }} />
                   </div>
                   <div style={{ fontSize: 11, color: "var(--text-muted)", whiteSpace: "nowrap", minWidth: 80, textAlign: "right" }}>
                     <strong style={{ color: "var(--text)" }}>{s.done}</strong>/{s.total} done · {pct}%
@@ -864,8 +848,8 @@ function SprintView({ projectKey }: { projectKey: string }) {
                           <span style={{ fontSize: 10, fontFamily: "monospace", color: "var(--text-muted)", fontWeight: 600 }}>{issue.key}</span>
                           <span style={{
                             fontSize: 10, fontWeight: 600, borderRadius: 10, padding: "1px 6px",
-                            background: issue.issuetype === "Bug" ? "#fee2e2" : issue.issuetype === "Epic" ? "#ede9fe" : "var(--surface2)",
-                            color: issue.issuetype === "Bug" ? "#dc2626" : issue.issuetype === "Epic" ? "#4f46e5" : "var(--text-muted)",
+                            background: issue.issuetype === "Bug" ? "#fee2e2" : issue.issuetype === "Epic" ? "#e0f7ff" : "var(--surface2)",
+                            color: issue.issuetype === "Bug" ? "#dc2626" : issue.issuetype === "Epic" ? "#0693e3" : "var(--text-muted)",
                           }}>{issue.issuetype}</span>
                         </div>
                         <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.4, textDecoration: issDone ? "line-through" : "none", opacity: issDone ? 0.6 : 1 }}>

@@ -5,6 +5,8 @@ export interface JiraEpic {
   priority: string;
   startDate: string | null;
   duedate: string | null;
+  newStartDate: string | null;
+  newDueDate: string | null;
   assignee: string | null;
   created: string;
   updated: string;
@@ -19,6 +21,8 @@ export interface JiraTask {
   priority: string;
   startDate: string | null;
   duedate: string | null;
+  newStartDate: string | null;
+  newDueDate: string | null;
   assignee: string | null;
   parent: string | null;
   parentKey: string | null;
@@ -111,7 +115,7 @@ export async function fetchProjects(): Promise<Array<{ key: string; name: string
 }
 
 export async function fetchProjectTasks(projectKey: string): Promise<JiraTask[]> {
-  const fields = ["summary", "status", "issuetype", "priority", "customfield_10015", "duedate", "assignee", "parent", "created", "updated"];
+  const fields = ["summary", "status", "issuetype", "priority", "customfield_10015", "duedate", "customfield_10578", "customfield_10049", "assignee", "parent", "created", "updated"];
   const issues = await searchJira(
     `project = "${projectKey}" AND issuetype != Epic AND created >= "2026-01-01" ORDER BY updated DESC`,
     fields, 200
@@ -124,6 +128,8 @@ export async function fetchProjectTasks(projectKey: string): Promise<JiraTask[]>
     priority: issue.fields.priority?.name || "Medium",
     startDate: issue.fields.customfield_10015 || null,
     duedate: issue.fields.duedate || null,
+    newStartDate: issue.fields.customfield_10578 || null,
+    newDueDate: issue.fields.customfield_10049 || null,
     assignee: issue.fields.assignee?.displayName || null,
     parent: issue.fields.parent?.fields?.summary || null,
     parentKey: issue.fields.parent?.key || null,
@@ -133,7 +139,7 @@ export async function fetchProjectTasks(projectKey: string): Promise<JiraTask[]>
 }
 
 export async function fetchProjectEpics(projectKey: string): Promise<JiraEpic[]> {
-  const fields = ["summary", "status", "priority", "customfield_10015", "duedate", "assignee", "created", "updated"];
+  const fields = ["summary", "status", "priority", "customfield_10015", "duedate", "customfield_10578", "customfield_10049", "assignee", "created", "updated"];
   const issues = await searchJira(
     `project = "${projectKey}" AND issuetype = Epic AND created >= "2026-01-01" ORDER BY duedate ASC`,
     fields, 100
@@ -145,6 +151,8 @@ export async function fetchProjectEpics(projectKey: string): Promise<JiraEpic[]>
     priority: issue.fields.priority?.name || "Medium",
     startDate: issue.fields.customfield_10015 || null,
     duedate: issue.fields.duedate || null,
+    newStartDate: issue.fields.customfield_10578 || null,
+    newDueDate: issue.fields.customfield_10049 || null,
     assignee: issue.fields.assignee?.displayName || null,
     created: issue.fields.created || "",
     updated: issue.fields.updated || "",
@@ -153,8 +161,8 @@ export async function fetchProjectEpics(projectKey: string): Promise<JiraEpic[]>
 
 export async function fetchDashboardData(projectKey?: string): Promise<JiraDashboardData> {
   const key = projectKey || PROJECT_KEY;
-  const epicFields = ["summary", "status", "priority", "customfield_10015", "duedate", "assignee", "description", "created", "updated"];
-  const taskFields = ["summary", "status", "issuetype", "priority", "customfield_10015", "duedate", "assignee", "parent", "created", "updated"];
+  const epicFields = ["summary", "status", "priority", "customfield_10015", "duedate", "customfield_10578", "customfield_10049", "assignee", "description", "created", "updated"];
+  const taskFields = ["summary", "status", "issuetype", "priority", "customfield_10015", "duedate", "customfield_10578", "customfield_10049", "assignee", "parent", "created", "updated"];
 
   const [epicIssues, taskIssues] = await Promise.all([
     searchJira(
@@ -176,6 +184,8 @@ export async function fetchDashboardData(projectKey?: string): Promise<JiraDashb
     priority: issue.fields.priority?.name || "Medium",
     startDate: issue.fields.customfield_10015 || null,
     duedate: issue.fields.duedate || null,
+    newStartDate: issue.fields.customfield_10578 || null,
+    newDueDate: issue.fields.customfield_10049 || null,
     assignee: issue.fields.assignee?.displayName || null,
     created: issue.fields.created || "",
     updated: issue.fields.updated || "",
@@ -190,6 +200,8 @@ export async function fetchDashboardData(projectKey?: string): Promise<JiraDashb
     priority: issue.fields.priority?.name || "Medium",
     startDate: issue.fields.customfield_10015 || null,
     duedate: issue.fields.duedate || null,
+    newStartDate: issue.fields.customfield_10578 || null,
+    newDueDate: issue.fields.customfield_10049 || null,
     assignee: issue.fields.assignee?.displayName || null,
     parent: issue.fields.parent?.fields?.summary || null,
     parentKey: issue.fields.parent?.key || null,

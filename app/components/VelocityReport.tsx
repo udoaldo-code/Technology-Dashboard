@@ -18,7 +18,7 @@ type PeriodId = typeof PERIODS[number]["id"];
 // ── Status / team helpers ─────────────────────────────────────────────────────
 const STATUS_CFG: Record<string, { color: string; bg: string; border: string; dot: string }> = {
   "Done":          { color: "#059669", bg: "#d1fae5", border: "#6ee7b7", dot: "#059669" },
-  "In Progress":   { color: "#4f46e5", bg: "#ede9fe", border: "#a5b4fc", dot: "#4f46e5" },
+  "In Progress":   { color: "#0693e3", bg: "#e0f7ff", border: "#7dd3fc", dot: "#00adef" },
   "To Do":         { color: "#475569", bg: "#f1f5f9", border: "#cbd5e1", dot: "#94a3b8" },
   "Delay":         { color: "#dc2626", bg: "#fee2e2", border: "#fca5a5", dot: "#dc2626" },
   "On Hold":       { color: "#ea580c", bg: "#ffedd5", border: "#fdba74", dot: "#ea580c" },
@@ -29,7 +29,7 @@ function sc(status: string) {
   return STATUS_CFG[status] || { color: "#94a3b8", bg: "#94a3b815", border: "#94a3b840", dot: "#94a3b8" };
 }
 const TEAM_COLORS: Record<string, { color: string; bg: string; icon: string }> = {
-  "Developer":        { color: "#4f46e5", bg: "#ede9fe", icon: "💻" },
+  "Developer":        { color: "#0693e3", bg: "#e0f7ff", icon: "💻" },
   "Business Analyst": { color: "#0891b2", bg: "#e0f2fe", icon: "📊" },
   "Business User":    { color: "#059669", bg: "#d1fae5", icon: "👔" },
   "QA":               { color: "#7c3aed", bg: "#f3e8ff", icon: "🔍" },
@@ -45,7 +45,7 @@ function VelBar({ pct, color }: { pct: number; color: string }) {
     </div>
   );
 }
-function velColor(pct: number) { return pct >= 80 ? "#10b981" : pct >= 50 ? "#4f46e5" : "#f87171"; }
+function velColor(pct: number) { return pct >= 80 ? "#10b981" : pct >= 50 ? "#00adef" : "#f87171"; }
 
 function StatusChip({ status, count }: { status: string; count: number }) {
   if (!count) return null;
@@ -259,7 +259,7 @@ function ProjectSummaryRow({ projects }: { projects: ProjectSummary[] }) {
               <VelBar pct={p.velocity} color={vc} />
               <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
                 <span style={{ fontSize: 11, color: "#059669" }}>✅ {p.done}</span>
-                <span style={{ fontSize: 11, color: "#4f46e5" }}>⚙️ {p.inProgress}</span>
+                <span style={{ fontSize: 11, color: "#0693e3" }}>⚙️ {p.inProgress}</span>
                 <span style={{ fontSize: 11, color: "#dc2626" }}>🚧 {p.blocked}</span>
                 <span style={{ fontSize: 11, color: "var(--text-muted)", marginLeft: "auto" }}>/{p.total}</span>
               </div>
@@ -293,7 +293,7 @@ function TeamSummaryCard({ team, total, done, inProgress, blocked, velocity, mem
       <div style={{ display: "flex", gap: "8px 16px", flexWrap: "wrap", marginTop: 10 }}>
         <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Total: <strong style={{ color: "var(--text)" }}>{total}</strong></span>
         <span style={{ fontSize: 12, color: "#059669" }}>Done: <strong>{done}</strong></span>
-        <span style={{ fontSize: 12, color: "#4f46e5" }}>In Progress: <strong>{inProgress}</strong></span>
+        <span style={{ fontSize: 12, color: "#0693e3" }}>In Progress: <strong>{inProgress}</strong></span>
         <span style={{ fontSize: 12, color: "#dc2626" }}>Blocked: <strong>{blocked}</strong></span>
       </div>
     </div>
@@ -376,7 +376,7 @@ function MemberCard({ member }: { member: VelocityMember }) {
                           {indent && <span style={{ fontSize: 9, color: "var(--text-muted)" }}>↳</span>}
                           <span style={{ fontSize: 10, fontFamily: "monospace", color: "var(--text-muted)", fontWeight: 600 }}>{task.key}</span>
                           <span style={{ fontSize: 10, fontWeight: 600, color: task.issuetype === "Bug" ? "#dc2626" : "var(--text-muted)", background: task.issuetype === "Bug" ? "#fee2e2" : "var(--surface2)", borderRadius: 10, padding: "1px 6px" }}>{task.issuetype}</span>
-                          {task.points && <span style={{ fontSize: 10, color: "#4f46e5", background: "#ede9fe", borderRadius: 10, padding: "1px 6px", fontWeight: 600 }}>{task.points} SP</span>}
+                          {task.points && <span style={{ fontSize: 10, color: "#0693e3", background: "#e0f7ff", borderRadius: 10, padding: "1px 6px", fontWeight: 600 }}>{task.points} SP</span>}
                         </div>
                         <div style={{ fontSize: indent ? 12 : 13, color: "var(--text)", lineHeight: 1.4, textDecoration: isDone ? "line-through" : "none", opacity: isDone ? 0.6 : 1 }}>{task.summary}</div>
                       </div>

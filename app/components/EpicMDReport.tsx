@@ -6,7 +6,7 @@ import type { EpicMDSummary, EpicMD } from "@/app/api/epic-md/route";
 // ── Status colours ────────────────────────────────────────────────────────────
 const STATUS_CFG: Record<string, { color: string; bg: string; border: string; dot: string }> = {
   "Done":          { color: "#059669", bg: "#d1fae5", border: "#6ee7b7", dot: "#059669" },
-  "In Progress":   { color: "#4f46e5", bg: "#ede9fe", border: "#a5b4fc", dot: "#4f46e5" },
+  "In Progress":   { color: "#0693e3", bg: "#e0f7ff", border: "#7dd3fc", dot: "#00adef" },
   "To Do":         { color: "#475569", bg: "#f1f5f9", border: "#cbd5e1", dot: "#94a3b8" },
   "Delay":         { color: "#dc2626", bg: "#fee2e2", border: "#fca5a5", dot: "#dc2626" },
   "On Hold":       { color: "#ea580c", bg: "#ffedd5", border: "#fdba74", dot: "#ea580c" },
@@ -45,7 +45,7 @@ function Badge({ status }: { status: string }) {
 
 function MDSourceBadge({ source }: { source: "mandays_field" | "working_days_field" | "date_range" | "default" }) {
   const cfg = {
-    mandays_field:    { label: "Mandays field",    color: "#7c3aed", bg: "#f3e8ff" },
+    mandays_field:    { label: "Mandays field",    color: "#0693e3", bg: "#e0f7ff" },
     working_days_field: { label: "Working Days field", color: "#2563eb", bg: "#dbeafe" },
     date_range:       { label: "Start→Due dates",  color: "#059669", bg: "#d1fae5" },
     default:          { label: "No data",           color: "#94a3b8", bg: "#f1f5f9" },
@@ -61,7 +61,7 @@ function MDSourceBadge({ source }: { source: "mandays_field" | "working_days_fie
 function DevSummary({ data }: { data: EpicMDSummary }) {
   if (!data.allAssignees.length) return null;
   const initials = (name: string) => name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
-  const colors = ["#7c3aed", "#2563eb", "#059669", "#d97706", "#dc2626", "#0891b2", "#b45309", "#4f46e5"];
+  const colors = ["#00adef", "#2563eb", "#059669", "#d97706", "#dc2626", "#0891b2", "#b45309", "#0693e3"];
   return (
     <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow-sm)", padding: "14px 18px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
@@ -88,14 +88,14 @@ function DevSummary({ data }: { data: EpicMDSummary }) {
 
 // ── Summary bar at the top ────────────────────────────────────────────────────
 function SummaryHeader({ data }: { data: EpicMDSummary }) {
-  const barColor = data.overallPct >= 80 ? "#10b981" : data.overallPct >= 50 ? "#4f46e5" : "#f87171";
+  const barColor = data.overallPct >= 80 ? "#10b981" : data.overallPct >= 50 ? "#00adef" : "#f87171";
 
   return (
-    <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow-sm)", padding: "16px 18px", borderLeft: "4px solid #7c3aed" }}>
+    <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow-sm)", padding: "16px 18px", borderLeft: "4px solid #00adef" }}>
       {/* Title row */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "#7c3aed", marginBottom: 4 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "#0693e3", marginBottom: 4 }}>
             📋 Epic Man-Day Report
           </div>
           {data.sprintName && (
@@ -121,7 +121,7 @@ function SummaryHeader({ data }: { data: EpicMDSummary }) {
             { v: data.totalMD,               l: "total MD",      c: "var(--text)" },
             { v: data.doneMD,                l: "done MD",       c: "#059669" },
             { v: `${data.remainingMD} MD`,   l: "remaining",     c: "#dc2626" },
-            { v: `${data.remainingHours}h`,  l: "hours left",    c: "#7c3aed" },
+            { v: `${data.remainingHours}h`,  l: "hours left",    c: "#0693e3" },
           ].map((s) => (
             <div key={s.l} style={{ textAlign: "center", minWidth: 44 }}>
               <div style={{ fontSize: 22, fontWeight: 900, color: s.c, lineHeight: 1 }}>{s.v}</div>
@@ -178,7 +178,7 @@ function SummaryHeader({ data }: { data: EpicMDSummary }) {
 // ── Epic row (expandable) ─────────────────────────────────────────────────────
 function EpicRow({ epic, rank, totalDevCount }: { epic: EpicMD; rank: number; totalDevCount: number }) {
   const [expanded, setExpanded] = useState(false);
-  const barColor = epic.completionPct >= 80 ? "#10b981" : epic.completionPct >= 50 ? "#4f46e5" : "#f87171";
+  const barColor = epic.completionPct >= 80 ? "#10b981" : epic.completionPct >= 50 ? "#00adef" : "#f87171";
   const ec = estColor(epic.estDaysToComplete);
 
   return (
@@ -217,7 +217,7 @@ function EpicRow({ epic, rank, totalDevCount }: { epic: EpicMD; rank: number; to
           <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Total: <strong style={{ color: "var(--text)" }}>{epic.totalMD} MD ({epic.totalHours}h)</strong></span>
           <span style={{ fontSize: 12, color: "#059669" }}>Done: <strong>{epic.doneMD} MD</strong></span>
           <span style={{ fontSize: 12, color: "#dc2626" }}>Left: <strong>{epic.remainingMD} MD ({epic.remainingHours}h)</strong></span>
-          <span style={{ fontSize: 12, color: "#7c3aed" }}>👥 <strong>{epic.devCount}</strong> dev{epic.devCount !== 1 ? "s" : ""}</span>
+          <span style={{ fontSize: 12, color: "#0693e3" }}>👥 <strong>{epic.devCount}</strong> dev{epic.devCount !== 1 ? "s" : ""}</span>
           <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{epic.doneTasks}/{epic.totalTasks} tasks</span>
           {epic.tasks.length === 0 && epic.epicManDays > 0 && (
             <MDSourceBadge source={epic.epicMDSource} />
@@ -270,7 +270,7 @@ function EpicRow({ epic, rank, totalDevCount }: { epic: EpicMD; rank: number; to
                             <span style={{ fontSize: 10, fontFamily: "monospace", color: "var(--text-muted)", fontWeight: 600 }}>{t.key}</span>
                             <span style={{ fontSize: 10, fontWeight: 600, color: t.issuetype === "Bug" ? "#dc2626" : "var(--text-muted)", background: t.issuetype === "Bug" ? "#fee2e2" : "var(--surface2)", borderRadius: 10, padding: "1px 6px" }}>{t.issuetype}</span>
                             {t.manDays > 0 && (
-                              <span style={{ fontSize: 10, fontWeight: 700, color: "#7c3aed", background: "#f3e8ff", borderRadius: 10, padding: "1px 6px" }}>{t.manDays} MD</span>
+                              <span style={{ fontSize: 10, fontWeight: 700, color: "#0693e3", background: "#e0f7ff", borderRadius: 10, padding: "1px 6px" }}>{t.manDays} MD</span>
                             )}
                             <MDSourceBadge source={t.mdSource} />
                           </div>
@@ -322,7 +322,7 @@ function SummaryTable({ data }: { data: EpicMDSummary }) {
           <tbody>
             {data.epics.map((epic, idx) => {
               const s = sc(epic.status);
-              const barColor = epic.completionPct >= 80 ? "#10b981" : epic.completionPct >= 50 ? "#4f46e5" : "#f87171";
+              const barColor = epic.completionPct >= 80 ? "#10b981" : epic.completionPct >= 50 ? "#00adef" : "#f87171";
               return (
                 <tr key={epic.key} style={{ background: idx % 2 === 0 ? "var(--surface)" : "var(--surface2)", borderBottom: "1px solid var(--border)" }}>
                   <td style={{ padding: "10px 12px", color: "var(--text-muted)", fontSize: 11, textAlign: "center" }}>{idx + 1}</td>
@@ -338,8 +338,8 @@ function SummaryTable({ data }: { data: EpicMDSummary }) {
                   <td style={{ padding: "10px 12px", fontWeight: 700, color: "var(--text)", textAlign: "center" }}>{epic.totalMD}</td>
                   <td style={{ padding: "10px 12px", fontWeight: 700, color: "#059669", textAlign: "center" }}>{epic.doneMD}</td>
                   <td style={{ padding: "10px 12px", fontWeight: 700, color: epic.remainingMD > 0 ? "#dc2626" : "#059669", textAlign: "center" }}>{epic.remainingMD}</td>
-                  <td style={{ padding: "10px 12px", fontWeight: 700, color: "#7c3aed", textAlign: "center" }}>{epic.remainingHours}h</td>
-                  <td style={{ padding: "10px 12px", textAlign: "center", color: "#7c3aed", fontWeight: 600 }}>{epic.devCount}</td>
+                  <td style={{ padding: "10px 12px", fontWeight: 700, color: "#0693e3", textAlign: "center" }}>{epic.remainingHours}h</td>
+                  <td style={{ padding: "10px 12px", textAlign: "center", color: "#0693e3", fontWeight: 600 }}>{epic.devCount}</td>
                   <td style={{ padding: "10px 12px", minWidth: 100 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <div style={{ flex: 1, height: 6, background: "#f1f5f9", borderRadius: 3, overflow: "hidden" }}>
@@ -367,12 +367,12 @@ function SummaryTable({ data }: { data: EpicMDSummary }) {
               <td style={{ padding: "10px 12px", fontWeight: 800, fontSize: 13, color: "var(--text)", textAlign: "center" }}>{data.totalMD}</td>
               <td style={{ padding: "10px 12px", fontWeight: 800, fontSize: 13, color: "#059669", textAlign: "center" }}>{data.doneMD}</td>
               <td style={{ padding: "10px 12px", fontWeight: 800, fontSize: 13, color: "#dc2626", textAlign: "center" }}>{data.remainingMD}</td>
-              <td style={{ padding: "10px 12px", fontWeight: 800, fontSize: 13, color: "#7c3aed", textAlign: "center" }}>{data.remainingHours}h</td>
-              <td style={{ padding: "10px 12px", fontWeight: 800, fontSize: 13, color: "#7c3aed", textAlign: "center" }}>{data.totalDevCount}</td>
+              <td style={{ padding: "10px 12px", fontWeight: 800, fontSize: 13, color: "#0693e3", textAlign: "center" }}>{data.remainingHours}h</td>
+              <td style={{ padding: "10px 12px", fontWeight: 800, fontSize: 13, color: "#0693e3", textAlign: "center" }}>{data.totalDevCount}</td>
               <td style={{ padding: "10px 12px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <div style={{ flex: 1, height: 6, background: "#f1f5f9", borderRadius: 3, overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${data.overallPct}%`, background: data.overallPct >= 80 ? "#10b981" : data.overallPct >= 50 ? "#4f46e5" : "#f87171", borderRadius: 3 }} />
+                    <div style={{ height: "100%", width: `${data.overallPct}%`, background: data.overallPct >= 80 ? "#10b981" : data.overallPct >= 50 ? "#00adef" : "#f87171", borderRadius: 3 }} />
                   </div>
                   <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text)" }}>{data.overallPct}%</span>
                 </div>
@@ -411,7 +411,7 @@ export default function EpicMDReportView({ projectKey, allProjects }: { projectK
 
   if (loading) return (
     <div style={{ padding: 48, textAlign: "center", background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-      <div style={{ width: 40, height: 40, border: "3px solid var(--border)", borderTopColor: "#7c3aed", borderRadius: "50%", margin: "0 auto 16px", animation: "spin 0.7s linear infinite" }} />
+      <div style={{ width: 40, height: 40, border: "3px solid var(--border)", borderTopColor: "#00adef", borderRadius: "50%", margin: "0 auto 16px", animation: "spin 0.7s linear infinite" }} />
       <div style={{ color: "var(--text-muted)", fontSize: 14 }}>Calculating man-days…</div>
     </div>
   );

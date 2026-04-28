@@ -69,14 +69,14 @@ function ProgressBar({ value, color }: { value: number; color: string }) {
 
 function rateColor(rate: number): string {
   if (rate >= 90) return "#059669";
-  if (rate >= 70) return "#4f46e5";
+  if (rate >= 70) return "#00adef";
   if (rate >= 50) return "#d97706";
   return "#dc2626";
 }
 
 function completionGrade(rate: number): { label: string; color: string; bg: string } {
   if (rate === 100) return { label: "Complete",  color: "#059669", bg: "#d1fae5" };
-  if (rate >= 75)  return { label: "Good",       color: "#4f46e5", bg: "#ede9fe" };
+  if (rate >= 75)  return { label: "Good",       color: "#0693e3", bg: "#e0f7ff" };
   if (rate >= 50)  return { label: "Partial",    color: "#d97706", bg: "#fef3c7" };
   if (rate > 0)    return { label: "Low",        color: "#ea580c", bg: "#ffedd5" };
   return              { label: "No Data",     color: "#dc2626", bg: "#fee2e2" };
@@ -518,7 +518,7 @@ export default function DataReportVsSource() {
                       style={{ borderBottom: "1px solid var(--border)", background: row.looker ? "transparent" : "#fff5f5" }}
                     >
                       <td style={{ padding: "10px 14px", whiteSpace: "nowrap" }}>
-                        <span style={{ background: "#ede9fe", color: "#4f46e5", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>
+                        <span style={{ background: "#e0f7ff", color: "#0693e3", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>
                           {row.country}
                         </span>
                       </td>
@@ -561,7 +561,7 @@ export default function DataReportVsSource() {
                 <span style={{ fontSize: 12, fontWeight: 700, color: "#dc2626", flexShrink: 0 }}>⚠</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: r.notes ? 4 : 0 }}>
-                    <span style={{ background: "#ede9fe", color: "#4f46e5", borderRadius: 10, padding: "1px 7px", fontSize: 11, fontWeight: 700 }}>{r.country}</span>
+                    <span style={{ background: "#e0f7ff", color: "#0693e3", borderRadius: 10, padding: "1px 7px", fontSize: 11, fontWeight: 700 }}>{r.country}</span>
                     <span style={{ background: "#dbeafe", color: "#1d4ed8", borderRadius: 10, padding: "1px 7px", fontSize: 11, fontWeight: 700 }}>{r.operator}</span>
                     <span style={{ fontWeight: 600, fontSize: 12, color: "var(--text)" }}>{r.service}</span>
                   </div>
@@ -595,7 +595,7 @@ export default function DataReportVsSource() {
 
             return (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 10 }}>
-                <Card style={{ padding: "14px 16px", borderTop: "3px solid #4f46e5" }}>
+                <Card style={{ padding: "14px 16px", borderTop: "3px solid #00adef" }}>
                   <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-muted)", marginBottom: 4 }}>MO Completion</div>
                   <div style={{ fontSize: 26, fontWeight: 800, color: overallPct >= 80 ? "#059669" : overallPct >= 50 ? "#d97706" : "#dc2626" }}>{overallPct}%</div>
                   <div style={{ height: 6, background: "var(--surface2)", borderRadius: 3, overflow: "hidden", marginTop: 4, border: "1px solid var(--border)" }}>
@@ -753,14 +753,14 @@ export default function DataReportVsSource() {
                       const isDone    = row.status.toUpperCase() === "DONE";
                       const diffNum   = parseFloat((row.diffPct || "0").replace(/%/g, "").trim()) || 0;
                       const absDiff   = Math.abs(diffNum);
-                      const diffColor = absDiff === 0 ? "#059669" : absDiff <= 5 ? "#4f46e5" : absDiff <= 20 ? "#d97706" : "#dc2626";
+                      const diffColor = absDiff === 0 ? "#059669" : absDiff <= 5 ? "#00adef" : absDiff <= 20 ? "#d97706" : "#dc2626";
                       const rowBg     = isDone ? "transparent" : "#fffbf0";
 
                       return (
                         <tr key={idx} style={{ borderBottom: "1px solid var(--border)", background: rowBg }}>
                           <td style={{ padding: "9px 12px", fontSize: 11, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{idx + 1}</td>
                           <td style={{ padding: "9px 12px", whiteSpace: "nowrap" }}>
-                            <span style={{ background: "#ede9fe", color: "#4f46e5", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>{row.country}</span>
+                            <span style={{ background: "#e0f7ff", color: "#0693e3", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>{row.country}</span>
                           </td>
                           <td style={{ padding: "9px 12px", whiteSpace: "nowrap" }}>
                             <span style={{ background: "#dbeafe", color: "#1d4ed8", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>{row.operator}</span>
