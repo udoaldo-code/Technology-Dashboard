@@ -160,7 +160,7 @@ function ProjectMultiSelect({
 
 // ── Estimation Table ──────────────────────────────────────────────────────────
 function EstimationTable({ members, elapsedDays }: { members: VelocityMember[]; elapsedDays: number }) {
-  const devs = members.filter((m) => m.name !== "Unassigned");
+  const devs = members.filter((m) => m.name !== "Unassigned" && m.team === "Developer");
   if (!devs.length) return null;
   const usesSP = devs.some((m) => m.totalPoints > 0);
   const unit = usesSP ? "SP" : "Tasks";
@@ -340,32 +340,74 @@ function MemberCard({ member }: { member: VelocityMember }) {
       </div>
       {expanded && (
         <div style={{ borderTop: "1px solid var(--border)", background: "var(--surface2)" }}>
-          <div style={{ padding: "8px 16px", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-muted)" }}>Tasks ({member.tasks.length})</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4, padding: "0 12px 12px" }}>
-            {member.tasks
-              .sort((a, b) => {
-                const order = ["In Progress","Testing QA","To Do","Delay","Waiting telco","On Hold","Done"];
-                return (order.indexOf(a.status) === -1 ? 99 : order.indexOf(a.status)) - (order.indexOf(b.status) === -1 ? 99 : order.indexOf(b.status));
-              })
-              .map((task) => {
-                const s = sc(task.status); const n = task.status.toLowerCase().replace(/\s*\/\s*/g, "/").trim(); const isDone = n === "done" || n === "stg/ready to deploy" || n === "waiting telco" || n === "on hold";
+          <div style={{ padding: "8px 16px", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-muted)" }}>
+            Tasks ({member.tasks.filter((t) => !t.isSubtask).length}) · Subtasks ({member.tasks.filter((t) => t.isSubtask).length})
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "0 12px 12px" }}>
+            {(() => {
+              const STATUS_ORDER = ["In Progress","Testing QA","To Do","Delay","Waiting telco","On Hold","Done"];
+              const ord = (s: string) => { const i = STATUS_ORDER.indexOf(s); return i === -1 ? 99 : i; };
+              const parents = member.tasks
+                .filter((t) => !t.isSubtask)
+                .sort((a, b) => ord(a.status) - ord(b.status));
+              const subtaskMap: Record<string, typeof member.tasks> = {};
+              for (const t of member.tasks.filter((t) => t.isSubtask)) {
+                const pk = t.parentKey || "__none__";
+                if (!subtaskMap[pk]) subtaskMap[pk] = [];
+                subtaskMap[pk].push(t);
+              }
+              // Orphan subtasks (parent not in this member's task list)
+              const knownParentKeys = new Set(parents.map((p) => p.key));
+              const orphans = (subtaskMap["__none__"] || []).concat(
+                ...Object.entries(subtaskMap)
+                  .filter(([pk]) => pk !== "__none__" && !knownParentKeys.has(pk))
+                  .map(([, tasks]) => tasks)
+              );
+
+              function TaskRow({ task, indent = false }: { task: typeof member.tasks[0]; indent?: boolean }) {
+                const s = sc(task.status);
+                const n = task.status.toLowerCase().replace(/\s*\/\s*/g, "/").trim();
+                const isDone = n === "done" || n === "stg/ready to deploy" || n === "waiting telco" || n === "on hold";
                 return (
-                  <div key={task.key} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "10px 12px", borderLeft: `3px solid ${s.dot}`, opacity: isDone ? 0.7 : 1 }}>
+                  <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "9px 12px", borderLeft: `3px solid ${s.dot}`, opacity: isDone ? 0.75 : 1, marginLeft: indent ? 20 : 0 }}>
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginBottom: 3 }}>
+                        <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap", marginBottom: 3 }}>
+                          {indent && <span style={{ fontSize: 9, color: "var(--text-muted)" }}>↳</span>}
                           <span style={{ fontSize: 10, fontFamily: "monospace", color: "var(--text-muted)", fontWeight: 600 }}>{task.key}</span>
                           <span style={{ fontSize: 10, fontWeight: 600, color: task.issuetype === "Bug" ? "#dc2626" : "var(--text-muted)", background: task.issuetype === "Bug" ? "#fee2e2" : "var(--surface2)", borderRadius: 10, padding: "1px 6px" }}>{task.issuetype}</span>
                           {task.points && <span style={{ fontSize: 10, color: "#4f46e5", background: "#ede9fe", borderRadius: 10, padding: "1px 6px", fontWeight: 600 }}>{task.points} SP</span>}
                         </div>
-                        <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.4, textDecoration: isDone ? "line-through" : "none", opacity: isDone ? 0.6 : 1 }}>{task.summary}</div>
+                        <div style={{ fontSize: indent ? 12 : 13, color: "var(--text)", lineHeight: 1.4, textDecoration: isDone ? "line-through" : "none", opacity: isDone ? 0.6 : 1 }}>{task.summary}</div>
                       </div>
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: s.bg, color: s.color, border: `1px solid ${s.border}`, borderRadius: 20, padding: "2px 8px", fontSize: 10, fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0 }}>{task.status}</span>
                     </div>
                     {task.duedate && <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>📅 {new Date(task.duedate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</div>}
                   </div>
                 );
-              })}
+              }
+
+              return (
+                <>
+                  {parents.map((task) => (
+                    <div key={task.key} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                      <TaskRow task={task} />
+                      {(subtaskMap[task.key] || [])
+                        .sort((a, b) => ord(a.status) - ord(b.status))
+                        .map((sub) => <TaskRow key={sub.key} task={sub} indent />)}
+                    </div>
+                  ))}
+                  {orphans.length > 0 && (
+                    <>
+                      <div style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, marginTop: 4, paddingLeft: 4 }}>Other subtasks</div>
+                      {orphans.sort((a, b) => ord(a.status) - ord(b.status)).map((task) => (
+                        <TaskRow key={task.key} task={task} indent />
+                      ))}
+                    </>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -518,7 +560,7 @@ export default function VelocityReport({ projectKey, allProjects }: { projectKey
   const [data, setData]               = useState<VelocityData | null>(null);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState<string | null>(null);
-  const [teamFilter, setTeamFilter]   = useState("All");
+  const [teamFilter, setTeamFilter]   = useState("Developer");
   const [memberSearch, setMemberSearch] = useState("");
 
   useEffect(() => { setSelectedProjects([projectKey]); }, [projectKey]);
@@ -549,7 +591,7 @@ export default function VelocityReport({ projectKey, allProjects }: { projectKey
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period, selectedMonth, selectedQuarter, selectedWeek, selectedProjects]);
 
-  function handlePeriod(p: PeriodId) { setPeriod(p); setTeamFilter("All"); setMemberSearch(""); if (p === "weekly") setWeek(0); }
+  function handlePeriod(p: PeriodId) { setPeriod(p); setTeamFilter("Developer"); setMemberSearch(""); if (p === "weekly") setWeek(0); }
 
   const periodCfg = PERIODS.find((p) => p.id === period)!;
   const allTeams  = data ? Array.from(new Set(data.members.map((m) => m.team))) : [];

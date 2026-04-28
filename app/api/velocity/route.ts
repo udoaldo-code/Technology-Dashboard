@@ -39,9 +39,12 @@ interface RawIssue {
   duedate: string | null;
   points: number | null;
   projectKey: string;
+  parentKey: string | null;
+  isSubtask: boolean;
 }
 
 function mapIssue(i: any, projectKey = ""): RawIssue {
+  const isSubtask = i.fields.issuetype?.subtask === true || i.fields.issuetype?.name === "Sub-task" || i.fields.issuetype?.name === "Subtask";
   return {
     key:        i.key,
     summary:    i.fields.summary            || "",
@@ -52,6 +55,8 @@ function mapIssue(i: any, projectKey = ""): RawIssue {
     duedate:    i.fields.duedate            || null,
     points:     i.fields.customfield_10016  || null,
     projectKey: i.key.split("-")[0]         || projectKey,
+    parentKey:  i.fields.parent?.key        || null,
+    isSubtask,
   };
 }
 
@@ -79,19 +84,41 @@ async function getActiveSprint(boardId: number) {
 }
 
 async function getSprintIssues(sprintId: number): Promise<RawIssue[]> {
-  const fields = "summary,status,issuetype,assignee,priority,customfield_10016,duedate";
+  const fields = "summary,status,issuetype,assignee,priority,customfield_10016,duedate,parent";
   const res = await fetch(
     `${JIRA_BASE_URL}/rest/agile/1.0/sprint/${sprintId}/issue?maxResults=500&fields=${fields}`,
     { headers: authHeaders(), next: { revalidate: 0 } }
   );
   if (!res.ok) throw new Error(`Sprint issues fetch failed: ${res.status}`);
   const data = await res.json();
+  const sprintIssues: RawIssue[] = (data.issues || []).map((i: any) => mapIssue(i));
+
+  // Fetch subtasks for all sprint issues
+  const parentKeys = sprintIssues.filter((i) => !i.isSubtask).map((i) => i.key);
+  const subtasks = parentKeys.length > 0 ? await fetchSubtasks(parentKeys) : [];
+  // Deduplicate — sprint may already include some subtasks
+  const existingKeys = new Set(sprintIssues.map((i) => i.key));
+  const newSubtasks = subtasks.filter((s) => !existingKeys.has(s.key));
+  return [...sprintIssues, ...newSubtasks];
+}
+
+async function fetchSubtasks(parentKeys: string[]): Promise<RawIssue[]> {
+  if (parentKeys.length === 0) return [];
+  const keysClause = parentKeys.map((k) => `"${k}"`).join(",");
+  const fields = "summary,status,issuetype,assignee,priority,customfield_10016,duedate,parent";
+  const jql = encodeURIComponent(`parent in (${keysClause}) ORDER BY assignee ASC`);
+  const res = await fetch(
+    `${JIRA_BASE_URL}/rest/api/3/search/jql?jql=${jql}&fields=${fields}&maxResults=500`,
+    { headers: authHeaders(), next: { revalidate: 0 } }
+  );
+  if (!res.ok) return [];
+  const data = await res.json();
   return (data.issues || []).map((i: any) => mapIssue(i));
 }
 
 // ── JQL fetch (supports multiple projects via "project in (...)") ─────────────
 async function fetchByJQL(projectKeys: string[], dateJQL: string): Promise<RawIssue[]> {
-  const fields = "summary,status,issuetype,assignee,priority,customfield_10016,duedate";
+  const fields = "summary,status,issuetype,assignee,priority,customfield_10016,duedate,parent";
   const projectClause = projectKeys.length === 1
     ? `project = "${projectKeys[0]}"`
     : `project in (${projectKeys.map((k) => `"${k}"`).join(",")})`;
@@ -210,6 +237,7 @@ function weeklyMeta(year: number, week: number): PeriodMeta {
 export interface VelocityTask {
   key: string; summary: string; status: string; issuetype: string;
   priority: string; duedate: string | null; points: number | null;
+  parentKey: string | null; isSubtask: boolean;
 }
 
 export interface VelocityMember {
