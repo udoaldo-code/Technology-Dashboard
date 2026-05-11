@@ -388,11 +388,18 @@ export default function GanttChart({ defaultProject, allProjects }: GanttChartPr
                               title={`${epic.key} · ${epic.status}\n${epic.summary}\nStart: ${fmtDate(epic.startDate)}  Due: ${fmtDate(epic.duedate)}${hasNewDates ? `\nNew Start: ${fmtDate(epic.newStartDate)}  New Due: ${fmtDate(epic.newDueDate)}` : ""}\nAssignee: ${epic.assignee || "—"}`}
                               style={{ position: "absolute", left: `${sp}%`, width: `${width}%`, top: hasNewDates ? "28%" : "50%", transform: "translateY(-50%)", height: 24, borderRadius: 5, background: color, boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 1px 3px ${color}50`, cursor: "default", zIndex: 2 }}
                             />
-                            {/* Label — inside bar if wide enough, outside to right if narrow */}
-                            <div style={{ position: "absolute", left: width >= 5 ? `${sp}%` : `calc(${sp + width}% + 5px)`, top: hasNewDates ? "28%" : "50%", transform: "translateY(-50%)", height: 24, display: "flex", alignItems: "center", gap: 6, paddingLeft: width >= 5 ? 8 : 0, paddingRight: width >= 5 ? 6 : 0, maxWidth: width >= 5 ? `${width}%` : "35%", overflow: "hidden", pointerEvents: "none", zIndex: 3 }}>
-                              <span style={{ fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, color: width >= 5 ? "#fff" : "var(--text)" }}>{epic.summary}</span>
-                              {width >= 14 && <span style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", whiteSpace: "nowrap", flexShrink: 0 }}>{fmtDate(epic.startDate)} → {fmtDate(epic.duedate)}</span>}
-                            </div>
+                            {/* Label — inside if >= 18%, otherwise always outside right (no clipping) */}
+                            {width >= 18 ? (
+                              <div style={{ position: "absolute", left: `${sp}%`, top: hasNewDates ? "28%" : "50%", transform: "translateY(-50%)", height: 24, display: "flex", alignItems: "center", gap: 6, paddingLeft: 8, paddingRight: 6, width: `${width}%`, overflow: "hidden", pointerEvents: "none", zIndex: 3 }}>
+                                <span style={{ fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, color: "#fff" }}>{epic.summary}</span>
+                                {width >= 28 && <span style={{ fontSize: 10, color: "rgba(255,255,255,0.75)", whiteSpace: "nowrap", flexShrink: 0 }}>{fmtDate(epic.startDate)} → {fmtDate(epic.duedate)}</span>}
+                              </div>
+                            ) : (
+                              <div style={{ position: "absolute", left: `calc(${sp + width}% + 5px)`, top: hasNewDates ? "28%" : "50%", transform: "translateY(-50%)", height: 24, display: "flex", alignItems: "center", gap: 6, pointerEvents: "none", zIndex: 3, whiteSpace: "nowrap" }}>
+                                <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text)" }}>{epic.summary}</span>
+                                <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{fmtDate(epic.startDate)} → {fmtDate(epic.duedate)}</span>
+                              </div>
+                            )}
 
                             {/* New-dates bar */}
                             {hasNewDates && (
@@ -442,11 +449,18 @@ export default function GanttChart({ defaultProject, allProjects }: GanttChartPr
                                     title={`${task.key} · ${task.status}\n${task.summary}\nStart: ${fmtDate(task.startDate)}  Due: ${fmtDate(task.duedate)}${taskHasNew ? `\nNew Start: ${fmtDate(task.newStartDate)}  New Due: ${fmtDate(task.newDueDate)}` : ""}\nAssignee: ${task.assignee || "—"}`}
                                     style={{ position: "absolute", left: `${tsp}%`, width: `${tw}%`, top: taskHasNew ? "30%" : "50%", transform: "translateY(-50%)", height: 20, borderRadius: 4, background: taskColor, boxShadow: `inset 0 1px 0 rgba(255,255,255,0.2), 0 1px 2px ${taskColor}40`, cursor: "default", zIndex: 2 }}
                                   />
-                                  {/* Task label — inside if wide, outside if narrow */}
-                                  <div style={{ position: "absolute", left: tw >= 5 ? `${tsp}%` : `calc(${tsp + tw}% + 4px)`, top: taskHasNew ? "30%" : "50%", transform: "translateY(-50%)", height: 20, display: "flex", alignItems: "center", gap: 5, paddingLeft: tw >= 5 ? 6 : 0, paddingRight: tw >= 5 ? 4 : 0, maxWidth: tw >= 5 ? `${tw}%` : "35%", overflow: "hidden", pointerEvents: "none", zIndex: 3 }}>
-                                    <span style={{ fontSize: 10, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, color: tw >= 5 ? "#fff" : "var(--text)" }}>{task.summary}</span>
-                                    {tw >= 12 && <span style={{ fontSize: 9, color: "rgba(255,255,255,0.65)", whiteSpace: "nowrap", flexShrink: 0 }}>{fmtDate(task.duedate)}</span>}
-                                  </div>
+                                  {/* Task label — inside if >= 15%, outside right (full name) if narrower */}
+                                  {tw >= 15 ? (
+                                    <div style={{ position: "absolute", left: `${tsp}%`, top: taskHasNew ? "30%" : "50%", transform: "translateY(-50%)", height: 20, display: "flex", alignItems: "center", gap: 5, paddingLeft: 6, paddingRight: 4, width: `${tw}%`, overflow: "hidden", pointerEvents: "none", zIndex: 3 }}>
+                                      <span style={{ fontSize: 10, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, color: "#fff" }}>{task.summary}</span>
+                                      {tw >= 24 && <span style={{ fontSize: 9, color: "rgba(255,255,255,0.65)", whiteSpace: "nowrap", flexShrink: 0 }}>{fmtDate(task.duedate)}</span>}
+                                    </div>
+                                  ) : (
+                                    <div style={{ position: "absolute", left: `calc(${tsp + tw}% + 4px)`, top: taskHasNew ? "30%" : "50%", transform: "translateY(-50%)", height: 20, display: "flex", alignItems: "center", pointerEvents: "none", zIndex: 3, whiteSpace: "nowrap", gap: 5 }}>
+                                      <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text)" }}>{task.summary}</span>
+                                      <span style={{ fontSize: 9, color: "var(--text-muted)" }}>{fmtDate(task.startDate)} → {fmtDate(task.duedate)}</span>
+                                    </div>
+                                  )}
                                 </>)}
                                 {taskHasNew && (
                                   <div
