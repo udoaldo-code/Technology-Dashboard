@@ -20,16 +20,16 @@ const TRACK_COLORS = [
 
 const STATUS_COLOR: Record<string, string> = {
   "Done":          "#10b981",
-  "In Progress":   "#6366f1",
+  "In Progress":   "#00adef",
   "To Do":         "#64748b",
   "Delay":         "#ef4444",
   "On Hold":       "#f97316",
-  "Waiting telco": "#f59e0b",
+  "Waiting telco": "#d97706",
 };
 
 const TASK_STATUS_COLOR: Record<string, string> = {
   "Done":        "#10b981",
-  "In Progress": "#6366f1",
+  "In Progress": "#00adef",
   "To Do":       "#64748b",
   "In Review":   "#8b5cf6",
   "Blocked":     "#ef4444",
@@ -323,7 +323,7 @@ export default function GanttChart({ defaultProject, allProjects }: GanttChartPr
                         const s = toPct(new Date(Math.min(...starts)), new Date(`${YEAR}-01-01`));
                         const e = toPct(new Date(Math.max(...ends)),   new Date(`${YEAR}-12-31`));
                         return (
-                          <div style={{ position: "absolute", left: `${s}%`, width: `${Math.max(e - s, 0.5)}%`, top: "50%", transform: "translateY(-50%)", height: 8, borderRadius: 4, background: `${trackColor}50`, border: `1px solid ${trackColor}80` }} />
+                          <div style={{ position: "absolute", left: `${s}%`, width: `${Math.max(e - s, 0.5)}%`, top: "50%", transform: "translateY(-50%)", height: 10, borderRadius: 5, background: `${trackColor}40`, border: `1.5px solid ${trackColor}` }} />
                         );
                       })()}
                     </div>
@@ -335,7 +335,7 @@ export default function GanttChart({ defaultProject, allProjects }: GanttChartPr
                     const end    = epic.duedate   ? new Date(epic.duedate)   : new Date(`${YEAR}-12-31`);
                     const sp     = toPct(start, new Date(`${YEAR}-01-01`));
                     const ep     = toPct(end,   new Date(`${YEAR}-12-31`));
-                    const width  = Math.max(ep - sp, 0.4);
+                    const width  = Math.max(ep - sp, 0.5);
                     const color  = STATUS_COLOR[epic.status] || "#64748b";
                     const overdue = epic.duedate && new Date(epic.duedate) < new Date() && epic.status !== "Done";
                     const epicTasks = proj.tasks.filter((t) => t.parentKey === epic.key && t.status !== "Done" && t.status !== "Dropped");
@@ -345,167 +345,112 @@ export default function GanttChart({ defaultProject, allProjects }: GanttChartPr
                     const newEnd   = epic.newDueDate   ? new Date(epic.newDueDate)   : end;
                     const nsp = toPct(newStart, new Date(`${YEAR}-01-01`));
                     const nep = toPct(newEnd,   new Date(`${YEAR}-12-31`));
-                    const nWidth = Math.max(nep - nsp, 0.4);
+                    const nWidth = Math.max(nep - nsp, 0.5);
+                    const rowH = hasNewDates ? 54 : 36;
 
                     return (
                       <div key={epic.key}>
-                        <div style={{ display: "flex", alignItems: "center", borderBottom: "1px solid var(--border)", minHeight: hasNewDates ? 60 : 44, background: idx % 2 === 0 ? "transparent" : `${trackColor}05` }}>
-                          {/* Label */}
-                          <div style={{ width: 240, flexShrink: 0, padding: "6px 12px 6px 16px", borderRight: "1px solid var(--border)", overflow: "hidden" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 2 }}>
-                              {/* Expand toggle */}
-                              <button
-                                onClick={() => toggleEpic(epic.key)}
-                                title={isEpicExpanded ? "Collapse tasks" : `Show ${epicTasks.length} task(s)`}
-                                style={{ background: "none", border: "none", padding: 0, cursor: epicTasks.length > 0 ? "pointer" : "default", color: epicTasks.length > 0 ? trackColor : "var(--border)", fontSize: 10, lineHeight: 1, flexShrink: 0, width: 12 }}
-                              >
-                                {epicTasks.length > 0 ? (isEpicExpanded ? "▾" : "▸") : "·"}
-                              </button>
-                              <span style={{ width: 7, height: 7, borderRadius: 2, background: color, flexShrink: 0 }} />
-                              <span style={{ fontSize: 10, fontFamily: "monospace", color: "var(--text-muted)" }}>{epic.key}</span>
-                              {overdue && <span style={{ fontSize: 9, color: "var(--red)", fontWeight: 800 }}>OVR</span>}
-                              {hasNewDates && <span style={{ fontSize: 9, color: "#f97316", fontWeight: 800 }}>NEW</span>}
-                              {epicTasks.length > 0 && (
-                                <span style={{ fontSize: 9, color: "var(--text-muted)", marginLeft: "auto" }}>{epicTasks.length}t</span>
-                              )}
+                        {/* ── Epic row ── */}
+                        <div style={{ display: "flex", alignItems: "stretch", borderBottom: "1px solid var(--border)", minHeight: rowH, background: idx % 2 === 0 ? "transparent" : `${trackColor}06` }}>
+
+                          {/* Left label — single compact line, click whole area to expand */}
+                          <div
+                            onClick={() => epicTasks.length > 0 && toggleEpic(epic.key)}
+                            style={{ width: 240, flexShrink: 0, padding: "0 10px 0 14px", borderRight: "1px solid var(--border)", overflow: "hidden", display: "flex", alignItems: "center", gap: 5, cursor: epicTasks.length > 0 ? "pointer" : "default", userSelect: "none" }}
+                          >
+                            {/* Collapse toggle */}
+                            <span style={{ fontSize: 10, color: epicTasks.length > 0 ? trackColor : "var(--border)", flexShrink: 0, width: 10, lineHeight: 1 }}>
+                              {epicTasks.length > 0 ? (isEpicExpanded ? "▾" : "▸") : "·"}
+                            </span>
+                            {/* Status dot */}
+                            <span style={{ width: 8, height: 8, borderRadius: 2, background: color, flexShrink: 0, boxShadow: `0 0 0 2px ${color}30` }} />
+                            {/* Key */}
+                            <span style={{ fontSize: 10, fontFamily: "monospace", color: "var(--text-muted)", flexShrink: 0, letterSpacing: "-0.2px" }}>{epic.key}</span>
+                            {/* Title */}
+                            <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{epic.summary}</span>
+                            {/* Badges */}
+                            <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
+                              {overdue && <span style={{ fontSize: 8, color: "#fff", background: "var(--red)", borderRadius: 3, padding: "1px 4px", fontWeight: 700 }}>OVR</span>}
+                              {hasNewDates && <span style={{ fontSize: 8, color: "#fff", background: "#f97316", borderRadius: 3, padding: "1px 4px", fontWeight: 700 }}>NEW</span>}
+                              {epicTasks.length > 0 && <span style={{ fontSize: 9, color: "var(--text-muted)" }}>{epicTasks.length}</span>}
                             </div>
-                            <div style={{ fontSize: 11, color: "var(--text)", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", paddingLeft: 17 }}>
-                              {epic.summary}
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3, paddingLeft: 17, flexWrap: "wrap" }}>
-                              <span style={{ fontSize: 9, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
-                                <span style={{ opacity: 0.6 }}>Start </span>
-                                <span style={{ fontWeight: 600, color: epic.startDate ? "var(--text)" : "var(--text-muted)" }}>
-                                  {fmtDate(epic.startDate)}
-                                </span>
-                              </span>
-                              <span style={{ fontSize: 9, color: "var(--border)", flexShrink: 0 }}>→</span>
-                              <span style={{ fontSize: 9, whiteSpace: "nowrap" }}>
-                                <span style={{ opacity: 0.6, color: "var(--text-muted)" }}>Due </span>
-                                <span style={{ fontWeight: 600, color: overdue ? "var(--red)" : epic.duedate ? "var(--text)" : "var(--text-muted)" }}>
-                                  {fmtDate(epic.duedate)}
-                                </span>
-                              </span>
-                            </div>
-                            {hasNewDates && (
-                              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2, paddingLeft: 17, flexWrap: "wrap" }}>
-                                <span style={{ fontSize: 9, color: "#f97316", fontWeight: 700, whiteSpace: "nowrap" }}>↳ New:</span>
-                                <span style={{ fontSize: 9, color: "#f97316", fontWeight: 600, whiteSpace: "nowrap" }}>{fmtDate(epic.newStartDate)} → {fmtDate(epic.newDueDate)}</span>
-                              </div>
-                            )}
                           </div>
 
-                          {/* Timeline bar */}
-                          <div style={{ flex: 1, position: "relative", height: hasNewDates ? 60 : 44 }}>
+                          {/* Timeline */}
+                          <div style={{ flex: 1, position: "relative" }}>
                             {MONTHS.map((_, mi) => (
-                              <div key={mi} style={{ position: "absolute", top: 0, bottom: 0, left: `${(mi / 12) * 100}%`, borderLeft: mi > 0 ? "1px dashed var(--border)" : "none", pointerEvents: "none" }} />
+                              <div key={mi} style={{ position: "absolute", top: 0, bottom: 0, left: `${(mi / 12) * 100}%`, borderLeft: mi > 0 ? "1px solid var(--border)" : "none", opacity: 0.5, pointerEvents: "none" }} />
                             ))}
-                            {todayP >= 0 && (
-                              <div style={{ position: "absolute", top: 0, bottom: 0, left: `${todayP}%`, width: 2, background: "#f59e0b", zIndex: 10 }} />
-                            )}
-                            {/* Original date bar */}
+                            {todayP >= 0 && <div style={{ position: "absolute", top: 0, bottom: 0, left: `${todayP}%`, width: 2, background: "#f59e0b", zIndex: 10 }} />}
+
+                            {/* Original bar */}
                             <div
-                              title={`${epic.summary}\n${epic.key}\nStatus: ${epic.status}\nStart: ${fmtDate(epic.startDate)}\nDue: ${fmtDate(epic.duedate)}${hasNewDates ? `\nNew Start: ${fmtDate(epic.newStartDate)}\nNew Due: ${fmtDate(epic.newDueDate)}` : ""}\nAssignee: ${epic.assignee || "Unassigned"}`}
-                              style={{ position: "absolute", left: `${sp}%`, width: `${width}%`, top: hasNewDates ? "30%" : "50%", transform: "translateY(-50%)", height: 26, borderRadius: 6, background: `${color}bb`, border: `1.5px solid ${color}`, display: "flex", flexDirection: "column", justifyContent: "center", paddingLeft: 7, paddingRight: 7, overflow: "hidden", cursor: "default", gap: 1 }}
+                              title={`${epic.key} · ${epic.status}\n${epic.summary}\nStart: ${fmtDate(epic.startDate)}  Due: ${fmtDate(epic.duedate)}${hasNewDates ? `\nNew Start: ${fmtDate(epic.newStartDate)}  New Due: ${fmtDate(epic.newDueDate)}` : ""}\nAssignee: ${epic.assignee || "—"}`}
+                              style={{ position: "absolute", left: `${sp}%`, width: `${width}%`, top: hasNewDates ? "28%" : "50%", transform: "translateY(-50%)", height: 24, borderRadius: 5, background: color, boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 1px 3px ${color}50`, display: "flex", alignItems: "center", paddingLeft: 8, paddingRight: 6, overflow: "hidden", cursor: "default", gap: 5 }}
                             >
-                              <div style={{ display: "flex", alignItems: "center", gap: 4, overflow: "hidden" }}>
-                                <span style={{ fontSize: 9, color: "#fff", fontWeight: 800, whiteSpace: "nowrap", flexShrink: 0 }}>{epic.key}</span>
-                                <span style={{ fontSize: 9, color: "#ffffffcc", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{epic.summary}</span>
-                              </div>
-                              <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-                                <span style={{ fontSize: 8, color: "#ffffffcc", whiteSpace: "nowrap" }}>{fmtDate(epic.startDate)} → {fmtDate(epic.duedate)}</span>
-                              </div>
+                              <span style={{ fontSize: 11, color: "#fff", fontWeight: 800, whiteSpace: "nowrap", flexShrink: 0, letterSpacing: "-0.3px" }}>{epic.key}</span>
+                              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.9)", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{epic.summary}</span>
+                              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", whiteSpace: "nowrap", marginLeft: "auto", flexShrink: 0 }}>{fmtDate(epic.startDate)} → {fmtDate(epic.duedate)}</span>
                             </div>
-                            {/* New date bar */}
+
+                            {/* New-dates bar */}
                             {hasNewDates && (
                               <div
-                                title={`New dates\nNew Start: ${fmtDate(epic.newStartDate)}\nNew Due: ${fmtDate(epic.newDueDate)}`}
-                                style={{ position: "absolute", left: `${nsp}%`, width: `${nWidth}%`, top: "72%", transform: "translateY(-50%)", height: 14, borderRadius: 4, background: "#f9731630", border: "1.5px dashed #f97316", display: "flex", alignItems: "center", paddingLeft: 5, paddingRight: 5, overflow: "hidden", cursor: "default" }}
+                                title={`Revised dates\nNew Start: ${fmtDate(epic.newStartDate)}\nNew Due: ${fmtDate(epic.newDueDate)}`}
+                                style={{ position: "absolute", left: `${nsp}%`, width: `${nWidth}%`, top: "74%", transform: "translateY(-50%)", height: 14, borderRadius: 3, background: "#f9731622", border: "1.5px dashed #f97316", display: "flex", alignItems: "center", paddingLeft: 5, overflow: "hidden", cursor: "default", gap: 4 }}
                               >
-                                <span style={{ fontSize: 7, color: "#f97316", fontWeight: 700, whiteSpace: "nowrap" }}>{fmtDate(epic.newStartDate)} → {fmtDate(epic.newDueDate)}</span>
+                                <span style={{ fontSize: 9, color: "#f97316", fontWeight: 700, whiteSpace: "nowrap" }}>↻ {fmtDate(epic.newStartDate)} → {fmtDate(epic.newDueDate)}</span>
                               </div>
                             )}
                           </div>
                         </div>
 
-                        {/* Task sub-rows (dropdown) */}
+                        {/* ── Task sub-rows ── */}
                         {isEpicExpanded && epicTasks.map((task) => {
                           const taskColor = TASK_STATUS_COLOR[task.status] || "#64748b";
                           const taskStart = task.startDate ? new Date(task.startDate) : new Date(`${YEAR}-01-01`);
                           const taskEnd   = task.duedate  ? new Date(task.duedate)  : new Date(`${YEAR}-12-31`);
                           const tsp = toPct(taskStart, new Date(`${YEAR}-01-01`));
                           const tep = toPct(taskEnd,   new Date(`${YEAR}-12-31`));
-                          const tw  = Math.max(tep - tsp, 0.4);
+                          const tw  = Math.max(tep - tsp, 0.5);
                           const taskHasNew = !!(task.newStartDate || task.newDueDate);
                           const tnStart = task.newStartDate ? new Date(task.newStartDate) : taskStart;
                           const tnEnd   = task.newDueDate   ? new Date(task.newDueDate)   : taskEnd;
                           const tnsp = toPct(tnStart, new Date(`${YEAR}-01-01`));
                           const tnep = toPct(tnEnd,   new Date(`${YEAR}-12-31`));
-                          const tnw  = Math.max(tnep - tnsp, 0.4);
+                          const tnw  = Math.max(tnep - tnsp, 0.5);
+                          const taskRowH = taskHasNew ? 48 : 30;
                           return (
-                            <div key={task.key} style={{ display: "flex", alignItems: "center", borderBottom: "1px solid var(--border)", minHeight: taskHasNew ? 60 : 46, background: `${trackColor}08`, borderLeft: `2px solid ${trackColor}30` }}>
-                              <div style={{ width: 240, flexShrink: 0, padding: "4px 10px 4px 28px", borderRight: "1px solid var(--border)", overflow: "hidden" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                  <span style={{ fontSize: 9, fontFamily: "monospace", color: "var(--text-muted)", flexShrink: 0 }}>{task.key}</span>
-                                  <span style={{ fontSize: 9, fontWeight: 700, borderRadius: 3, padding: "1px 4px", background: `${taskColor}20`, color: taskColor, flexShrink: 0, whiteSpace: "nowrap" }}>
-                                    {task.status}
-                                  </span>
-                                  {taskHasNew && <span style={{ fontSize: 9, color: "#f97316", fontWeight: 800 }}>NEW</span>}
-                                </div>
-                                <div style={{ fontSize: 10, color: "var(--text)", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 1 }}>
-                                  {task.summary}
-                                </div>
-                                <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2, flexWrap: "wrap" }}>
-                                  <span style={{ fontSize: 9, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
-                                    <span style={{ opacity: 0.6 }}>Start </span>
-                                    <span style={{ fontWeight: 600, color: task.startDate ? "var(--text)" : "var(--text-muted)" }}>{fmtDate(task.startDate)}</span>
-                                  </span>
-                                  <span style={{ fontSize: 9, color: "var(--border)" }}>→</span>
-                                  <span style={{ fontSize: 9, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
-                                    <span style={{ opacity: 0.6 }}>Due </span>
-                                    <span style={{ fontWeight: 600, color: task.duedate ? "var(--text)" : "var(--text-muted)" }}>{fmtDate(task.duedate)}</span>
-                                  </span>
-                                </div>
-                                {taskHasNew && (
-                                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2, flexWrap: "wrap" }}>
-                                    <span style={{ fontSize: 9, color: "#f97316", fontWeight: 700, whiteSpace: "nowrap" }}>↳ New:</span>
-                                    <span style={{ fontSize: 9, color: "#f97316", fontWeight: 600, whiteSpace: "nowrap" }}>{fmtDate(task.newStartDate)} → {fmtDate(task.newDueDate)}</span>
-                                  </div>
-                                )}
-                                {task.assignee && (
-                                  <div style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                    👤 {task.assignee}
-                                  </div>
-                                )}
+                            <div key={task.key} style={{ display: "flex", alignItems: "stretch", borderBottom: "1px solid var(--border)", minHeight: taskRowH, background: `${trackColor}05`, borderLeft: `3px solid ${color}40` }}>
+                              {/* Task label */}
+                              <div style={{ width: 240, flexShrink: 0, padding: "0 10px 0 28px", borderRight: "1px solid var(--border)", overflow: "hidden", display: "flex", alignItems: "center", gap: 5 }}>
+                                <span style={{ width: 6, height: 6, borderRadius: "50%", background: taskColor, flexShrink: 0 }} />
+                                <span style={{ fontSize: 10, fontFamily: "monospace", color: "var(--text-muted)", flexShrink: 0 }}>{task.key}</span>
+                                <span style={{ fontSize: 10, fontWeight: 500, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{task.summary}</span>
+                                {taskHasNew && <span style={{ fontSize: 8, color: "#fff", background: "#f97316", borderRadius: 3, padding: "1px 3px", fontWeight: 700, flexShrink: 0 }}>NEW</span>}
                               </div>
-                              <div style={{ flex: 1, position: "relative", height: taskHasNew ? 60 : 46 }}>
+                              {/* Task timeline */}
+                              <div style={{ flex: 1, position: "relative" }}>
                                 {MONTHS.map((_, mi) => (
-                                  <div key={mi} style={{ position: "absolute", top: 0, bottom: 0, left: `${(mi / 12) * 100}%`, borderLeft: mi > 0 ? "1px dashed var(--border)" : "none", pointerEvents: "none" }} />
+                                  <div key={mi} style={{ position: "absolute", top: 0, bottom: 0, left: `${(mi / 12) * 100}%`, borderLeft: mi > 0 ? "1px solid var(--border)" : "none", opacity: 0.5, pointerEvents: "none" }} />
                                 ))}
-                                {todayP >= 0 && <div style={{ position: "absolute", top: 0, bottom: 0, left: `${todayP}%`, width: 1, background: "#f59e0b80", zIndex: 5 }} />}
-                                {task.duedate && (
+                                {todayP >= 0 && <div style={{ position: "absolute", top: 0, bottom: 0, left: `${todayP}%`, width: 1, background: "#f59e0b", zIndex: 5 }} />}
+                                {(task.startDate || task.duedate) && (
                                   <div
-                                    title={`${task.summary}\n${task.key}\nStatus: ${task.status}\nStart: ${fmtDate(task.startDate)}\nDue: ${fmtDate(task.duedate)}${taskHasNew ? `\nNew Start: ${fmtDate(task.newStartDate)}\nNew Due: ${fmtDate(task.newDueDate)}` : ""}\nAssignee: ${task.assignee || "Unassigned"}`}
-                                    style={{ position: "absolute", left: `${tsp}%`, width: `${tw}%`, top: taskHasNew ? "32%" : "50%", transform: "translateY(-50%)", height: 22, borderRadius: 5, background: `${taskColor}99`, border: `1px solid ${taskColor}`, cursor: "default", display: "flex", flexDirection: "column", justifyContent: "center", paddingLeft: 5, paddingRight: 5, overflow: "hidden", gap: 1 }}
+                                    title={`${task.key} · ${task.status}\n${task.summary}\nStart: ${fmtDate(task.startDate)}  Due: ${fmtDate(task.duedate)}${taskHasNew ? `\nNew Start: ${fmtDate(task.newStartDate)}  New Due: ${fmtDate(task.newDueDate)}` : ""}\nAssignee: ${task.assignee || "—"}`}
+                                    style={{ position: "absolute", left: `${tsp}%`, width: `${tw}%`, top: taskHasNew ? "30%" : "50%", transform: "translateY(-50%)", height: 20, borderRadius: 4, background: taskColor, boxShadow: `inset 0 1px 0 rgba(255,255,255,0.2), 0 1px 2px ${taskColor}40`, display: "flex", alignItems: "center", paddingLeft: 6, paddingRight: 4, overflow: "hidden", cursor: "default", gap: 4 }}
                                   >
-                                    <div style={{ display: "flex", alignItems: "center", gap: 3, overflow: "hidden" }}>
-                                      <span style={{ fontSize: 8, color: "#fff", fontWeight: 800, whiteSpace: "nowrap", flexShrink: 0 }}>{task.key}</span>
-                                      <span style={{ fontSize: 8, color: "#ffffffcc", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.summary}</span>
-                                    </div>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                                      <span style={{ fontSize: 7, color: "#ffffffaa", whiteSpace: "nowrap", flexShrink: 0 }}>{fmtDate(task.startDate)}</span>
-                                      <span style={{ fontSize: 7, color: "#ffffff60", flexShrink: 0 }}>→</span>
-                                      <span style={{ fontSize: 7, color: "#ffffffaa", whiteSpace: "nowrap", flexShrink: 0 }}>{fmtDate(task.duedate)}</span>
-                                    </div>
+                                    <span style={{ fontSize: 10, color: "#fff", fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 }}>{task.key}</span>
+                                    <span style={{ fontSize: 10, color: "rgba(255,255,255,0.88)", fontWeight: 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.summary}</span>
+                                    <span style={{ fontSize: 9, color: "rgba(255,255,255,0.65)", whiteSpace: "nowrap", marginLeft: "auto", flexShrink: 0 }}>{fmtDate(task.duedate)}</span>
                                   </div>
                                 )}
-                                {/* New date bar */}
                                 {taskHasNew && (
                                   <div
-                                    title={`New dates\nNew Start: ${fmtDate(task.newStartDate)}\nNew Due: ${fmtDate(task.newDueDate)}`}
-                                    style={{ position: "absolute", left: `${tnsp}%`, width: `${tnw}%`, top: "72%", transform: "translateY(-50%)", height: 12, borderRadius: 3, background: "#f9731630", border: "1.5px dashed #f97316", display: "flex", alignItems: "center", paddingLeft: 4, overflow: "hidden", cursor: "default" }}
+                                    title={`Revised dates\nNew Start: ${fmtDate(task.newStartDate)}\nNew Due: ${fmtDate(task.newDueDate)}`}
+                                    style={{ position: "absolute", left: `${tnsp}%`, width: `${tnw}%`, top: "74%", transform: "translateY(-50%)", height: 12, borderRadius: 3, background: "#f9731622", border: "1.5px dashed #f97316", display: "flex", alignItems: "center", paddingLeft: 4, overflow: "hidden", cursor: "default" }}
                                   >
-                                    <span style={{ fontSize: 6, color: "#f97316", fontWeight: 700, whiteSpace: "nowrap" }}>{fmtDate(task.newStartDate)} → {fmtDate(task.newDueDate)}</span>
+                                    <span style={{ fontSize: 8, color: "#f97316", fontWeight: 700, whiteSpace: "nowrap" }}>↻ {fmtDate(task.newStartDate)} → {fmtDate(task.newDueDate)}</span>
                                   </div>
                                 )}
                               </div>
